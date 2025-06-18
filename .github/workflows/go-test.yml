@@ -5,9 +5,13 @@ name: Go Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - master
+      - task_*
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - master
+      - task_*
 
 permissions:
   contents: read

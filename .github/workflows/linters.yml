@@ -2,9 +2,13 @@ name: Linters
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [ "main" ]
+    branches:
+      - master
+      - task_*
   push:
-    branches: [ "main" ]
+    branches:
+      - master
+      - task_*
 
 permissions:
   contents: read
