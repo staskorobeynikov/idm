@@ -73,7 +73,7 @@ func (r *RoleRepository) FindByIds(ids []int64) ([]RoleEntity, error) {
 	return roles, nil
 }
 
-func (r *RoleRepository) DeleteByUId(id int64) error {
+func (r *RoleRepository) DeleteById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM role WHERE id = $1", id)
 	if err != nil {
 		return err

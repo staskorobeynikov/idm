@@ -18,14 +18,14 @@ type EmployeeEntity struct {
 	Name      string    `db:"name"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
-	roleId    int       `db:"role_id"`
+	RoleId    int64     `db:"role_id"`
 }
 
 func (r *EmployeeRepository) Add(e EmployeeEntity) (int64, error) {
 	var id int64
 	err := r.db.QueryRow(
 		"INSERT INTO employee (name, role_id) VALUES ($1, $2) RETURNING id",
-		e.Name, e.roleId).Scan(&id)
+		e.Name, e.RoleId).Scan(&id)
 	if err != nil {
 		return -1, err
 	}
@@ -74,7 +74,7 @@ func (r *EmployeeRepository) FindByIds(ids []int64) ([]EmployeeEntity, error) {
 	return employees, nil
 }
 
-func (r *EmployeeRepository) DeleteByUId(id int64) error {
+func (r *EmployeeRepository) DeleteById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM employee WHERE id = $1", id)
 	if err != nil {
 		return err
