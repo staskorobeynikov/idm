@@ -7,21 +7,21 @@ import (
 )
 
 type Fixture struct {
-	employees *employee.EmployeeRepository
+	employees *employee.Repository
 }
 
-func NewFixture(employees *employee.EmployeeRepository) *Fixture {
+func NewFixture(employees *employee.Repository) *Fixture {
 	return &Fixture{
 		employees: employees,
 	}
 }
 
 func (f *Fixture) Employee(name string, roleId int64) int64 {
-	var entity = employee.EmployeeEntity{
+	var entity = employee.Entity{
 		Name:   name,
 		RoleId: roleId,
 	}
-	var newId, err = f.employees.Add(entity)
+	var newId, err = f.employees.Save(entity)
 	if err != nil {
 		panic(err)
 	}

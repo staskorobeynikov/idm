@@ -2,26 +2,19 @@ package employee
 
 import (
 	"github.com/jmoiron/sqlx"
-	"time"
 )
 
-type EmployeeRepository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewEmployeeRepository(database *sqlx.DB) *EmployeeRepository {
-	return &EmployeeRepository{db: database}
+func NewRepository(database *sqlx.DB) *Repository {
+	return &Repository{
+		db: database,
+	}
 }
 
-type EmployeeEntity struct {
-	Id        int       `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	RoleId    int64     `db:"role_id"`
-}
-
-func (r *EmployeeRepository) Add(e EmployeeEntity) (int64, error) {
+func (r *Repository) Save(e Entity) (int64, error) {
 	var id int64
 	err := r.db.QueryRow(
 		"INSERT INTO employee (name, role_id) VALUES ($1, $2) RETURNING id",
@@ -32,19 +25,19 @@ func (r *EmployeeRepository) Add(e EmployeeEntity) (int64, error) {
 	return id, nil
 }
 
-func (r *EmployeeRepository) GetById(id int64) (res EmployeeEntity, err error) {
+func (r *Repository) FindById(id int64) (res Entity, err error) {
 	err = r.db.Get(&res, "SELECT * FROM employee WHERE id = $1", id)
 	return res, err
 }
 
-func (r *EmployeeRepository) FindAll() ([]EmployeeEntity, error) {
-	var employees []EmployeeEntity
+func (r *Repository) FindAll() ([]Entity, error) {
+	var employees []Entity
 	rows, err := r.db.Queryx("SELECT * FROM employee")
 	if err != nil {
 		return employees, err
 	}
 	for rows.Next() {
-		var e EmployeeEntity
+		var e Entity
 		if err := rows.StructScan(&e); err != nil {
 			return employees, err
 		}
@@ -53,8 +46,8 @@ func (r *EmployeeRepository) FindAll() ([]EmployeeEntity, error) {
 	return employees, nil
 }
 
-func (r *EmployeeRepository) FindByIds(ids []int64) ([]EmployeeEntity, error) {
-	var employees []EmployeeEntity
+func (r *Repository) FindByIds(ids []int64) ([]Entity, error) {
+	var employees []Entity
 	query, args, err := sqlx.In("SELECT * FROM employee WHERE id IN (?)", ids)
 	if err != nil {
 		return employees, err
@@ -65,7 +58,7 @@ func (r *EmployeeRepository) FindByIds(ids []int64) ([]EmployeeEntity, error) {
 		return employees, err
 	}
 	for rows.Next() {
-		var e EmployeeEntity
+		var e Entity
 		if err := rows.StructScan(&e); err != nil {
 			return employees, err
 		}
@@ -74,7 +67,7 @@ func (r *EmployeeRepository) FindByIds(ids []int64) ([]EmployeeEntity, error) {
 	return employees, nil
 }
 
-func (r *EmployeeRepository) DeleteById(id int64) error {
+func (r *Repository) DeleteById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM employee WHERE id = $1", id)
 	if err != nil {
 		return err
@@ -82,7 +75,7 @@ func (r *EmployeeRepository) DeleteById(id int64) error {
 	return nil
 }
 
-func (r *EmployeeRepository) DeleteByIds(ids []int64) error {
+func (r *Repository) DeleteByIds(ids []int64) error {
 	query, args, err := sqlx.In("DELETE FROM employee WHERE id IN (?)", ids)
 	if err != nil {
 		return err

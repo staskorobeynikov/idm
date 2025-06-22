@@ -18,12 +18,12 @@ func TestRoleRepository(t *testing.T) {
 			clearDatabase()
 		}
 	}()
-	var roleRepository = role.NewRoleRepository(db)
+	var roleRepository = role.NewRepository(db)
 	var roleFixture = NewRoleFixture(roleRepository)
 	_ = roleFixture.CreateDatabase(db)
 	t.Run("find an role by id", func(t *testing.T) {
 		var newRoleId = roleFixture.Role("Test Name")
-		got, err := roleRepository.GetById(newRoleId)
+		got, err := roleRepository.FindById(newRoleId)
 		a.Nil(err)
 		a.NotEmpty(got)
 		a.NotEmpty(got.Id)
