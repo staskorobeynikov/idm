@@ -22,15 +22,15 @@ func TestEmployeeRepository(t *testing.T) {
 	defer func() {
 		db.MustExec("DELETE FROM role")
 	}()
-	var employeeRepository = employee.NewEmployeeRepository(db)
+	var employeeRepository = employee.NewRepository(db)
 	var emplFixture = NewFixture(employeeRepository)
-	var roleRepository = role.NewRoleRepository(db)
+	var roleRepository = role.NewRepository(db)
 	var roleFixture = NewRoleFixture(roleRepository)
 	var newRoleId = roleFixture.Role("Test Name")
 	_ = emplFixture.CreateDatabase(db)
 	t.Run("find an employee by id", func(t *testing.T) {
 		var newEmployeeId = emplFixture.Employee("Test Name", newRoleId)
-		got, err := employeeRepository.GetById(newEmployeeId)
+		got, err := employeeRepository.FindById(newEmployeeId)
 		a.Nil(err)
 		a.NotEmpty(got)
 		a.NotEmpty(got.Id)

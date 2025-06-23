@@ -7,20 +7,20 @@ import (
 )
 
 type RoleFixture struct {
-	roles *role.RoleRepository
+	roles *role.Repository
 }
 
-func NewRoleFixture(roles *role.RoleRepository) *RoleFixture {
+func NewRoleFixture(roles *role.Repository) *RoleFixture {
 	return &RoleFixture{
 		roles: roles,
 	}
 }
 
 func (f *RoleFixture) Role(name string) int64 {
-	var entity = role.RoleEntity{
+	var entity = role.Entity{
 		Name: name,
 	}
-	var newId, err = f.roles.Add(entity)
+	var newId, err = f.roles.Save(entity)
 	if err != nil {
 		panic(err)
 	}

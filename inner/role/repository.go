@@ -2,25 +2,19 @@ package role
 
 import (
 	"github.com/jmoiron/sqlx"
-	"time"
 )
 
-type RoleRepository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewRoleRepository(database *sqlx.DB) *RoleRepository {
-	return &RoleRepository{db: database}
+func NewRepository(database *sqlx.DB) *Repository {
+	return &Repository{
+		db: database,
+	}
 }
 
-type RoleEntity struct {
-	Id        int       `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-}
-
-func (r *RoleRepository) Add(e RoleEntity) (int64, error) {
+func (r *Repository) Save(e Entity) (int64, error) {
 	var id int64
 	err := r.db.QueryRow(
 		"INSERT INTO role (name) VALUES ($1) RETURNING id",
@@ -31,19 +25,19 @@ func (r *RoleRepository) Add(e RoleEntity) (int64, error) {
 	return id, nil
 }
 
-func (r *RoleRepository) GetById(id int64) (res RoleEntity, err error) {
+func (r *Repository) FindById(id int64) (res Entity, err error) {
 	err = r.db.Get(&res, "SELECT * FROM role WHERE id = $1", id)
 	return res, err
 }
 
-func (r *RoleRepository) FindAll() ([]RoleEntity, error) {
-	var roles []RoleEntity
+func (r *Repository) FindAll() ([]Entity, error) {
+	var roles []Entity
 	rows, err := r.db.Queryx("SELECT * FROM role")
 	if err != nil {
 		return roles, err
 	}
 	for rows.Next() {
-		var role RoleEntity
+		var role Entity
 		if err := rows.StructScan(&role); err != nil {
 			return roles, err
 		}
@@ -52,8 +46,8 @@ func (r *RoleRepository) FindAll() ([]RoleEntity, error) {
 	return roles, nil
 }
 
-func (r *RoleRepository) FindByIds(ids []int64) ([]RoleEntity, error) {
-	var roles []RoleEntity
+func (r *Repository) FindByIds(ids []int64) ([]Entity, error) {
+	var roles []Entity
 	query, args, err := sqlx.In("SELECT * FROM role WHERE id IN (?)", ids)
 	if err != nil {
 		return roles, err
@@ -64,7 +58,7 @@ func (r *RoleRepository) FindByIds(ids []int64) ([]RoleEntity, error) {
 		return roles, err
 	}
 	for rows.Next() {
-		var role RoleEntity
+		var role Entity
 		if err := rows.StructScan(&role); err != nil {
 			return roles, err
 		}
@@ -73,7 +67,7 @@ func (r *RoleRepository) FindByIds(ids []int64) ([]RoleEntity, error) {
 	return roles, nil
 }
 
-func (r *RoleRepository) DeleteById(id int64) error {
+func (r *Repository) DeleteById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM role WHERE id = $1", id)
 	if err != nil {
 		return err
@@ -81,7 +75,7 @@ func (r *RoleRepository) DeleteById(id int64) error {
 	return nil
 }
 
-func (r *RoleRepository) DeleteByIds(ids []int64) error {
+func (r *Repository) DeleteByIds(ids []int64) error {
 	query, args, err := sqlx.In("DELETE FROM role WHERE id IN (?)", ids)
 	if err != nil {
 		return err
