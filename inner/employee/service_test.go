@@ -58,11 +58,11 @@ func (r *MockRepo) DeleteByIds(ids []int64) error {
 func TestSave(t *testing.T) {
 	t.Run("should return wrapped error because begin transaction was failed", func(t *testing.T) {
 		a := assert.New(t)
-		db, mck, err := sqlmock.New()
+		db, mck, _ := sqlmock.New()
 		mck.ExpectBegin().WillReturnError(fmt.Errorf("error creating transaction"))
 		sqlxDb := sqlx.NewDb(db, "sqlmock")
 		repo := NewRepository(sqlxDb)
-		_, err = repo.BeginTransaction()
+		_, err := repo.BeginTransaction()
 		a.Error(err)
 		a.Equal("error creating transaction", err.Error())
 	})
@@ -121,7 +121,6 @@ func TestSave(t *testing.T) {
 			UpdatedAt: time.Now(),
 			RoleId:    1,
 		}
-		err = errors.New("database error")
 		repo.On("FindByName", tx, entity.Name).Return(true, nil)
 		var want = Response{
 			Id: 1,
@@ -190,7 +189,6 @@ func TestSave(t *testing.T) {
 			UpdatedAt: time.Now(),
 			RoleId:    1,
 		}
-		err = errors.New("database error")
 		repo.On("FindByName", tx, entity.Name).Return(false, nil)
 		repo.On("Save", tx, entity).Return(entity.Id, nil)
 		var want = Response{

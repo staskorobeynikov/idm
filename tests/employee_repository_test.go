@@ -119,20 +119,23 @@ func TestEmployeeRepository(t *testing.T) {
 	t.Run("find by name and save employee in one tx", func(t *testing.T) {
 		tx, err := employeeRepository.BeginTransaction()
 		a.NoError(err)
-		defer tx.Rollback()
-		employee := employee.Entity{
+		defer func() {
+			err := tx.Rollback()
+			a.NoError(err)
+		}()
+		empl := employee.Entity{
 			Id:        1,
 			Name:      "Test Name",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 			RoleId:    newRoleId,
 		}
-		isExist, err := employeeRepository.FindByName(tx, employee.Name)
+		isExist, err := employeeRepository.FindByName(tx, empl.Name)
 		a.False(isExist)
-		got, err := employeeRepository.Save(tx, employee)
+		got, err := employeeRepository.Save(tx, empl)
 		a.NoError(err)
 		a.NotEmpty(got)
-		found, err := employeeRepository.FindByName(tx, employee.Name)
+		found, err := employeeRepository.FindByName(tx, empl.Name)
 		a.NoError(err)
 		a.NotEmpty(found)
 		a.True(found)
