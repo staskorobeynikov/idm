@@ -3,6 +3,8 @@ package employee
 import (
 	"errors"
 	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -13,14 +15,24 @@ type MockRepo struct {
 	mock.Mock
 }
 
-func (r *MockRepo) Save(e Entity) (int64, error) {
-	args := r.Called(e)
+func (r *MockRepo) BeginTransaction() (*sqlx.Tx, error) {
+	args := r.Called()
+	return args.Get(0).(*sqlx.Tx), args.Error(1)
+}
+
+func (r *MockRepo) Save(tx *sqlx.Tx, e Entity) (int64, error) {
+	args := r.Called(tx, e)
 	return args.Get(0).(int64), args.Error(1)
 }
 
 func (r *MockRepo) FindById(id int64) (employee Entity, err error) {
 	args := r.Called(id)
 	return args.Get(0).(Entity), args.Error(1)
+}
+
+func (r *MockRepo) FindByName(tx *sqlx.Tx, name string) (bool, error) {
+	args := r.Called(tx, name)
+	return args.Bool(0), args.Error(1)
 }
 
 func (r *MockRepo) FindAll() ([]Entity, error) {
@@ -44,27 +56,31 @@ func (r *MockRepo) DeleteByIds(ids []int64) error {
 }
 
 func TestSave(t *testing.T) {
-	var a = assert.New(t)
-	t.Run("should return id new employee", func(t *testing.T) {
-		var repo = new(MockRepo)
-		var svc = NewService(repo)
-		var entity = Entity{
-			Id:        1,
-			Name:      "test",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			RoleId:    1,
-		}
-		var want = entity.toResponse()
-		repo.On("Save", entity).Return(entity.Id, nil)
-		var got, err = svc.Save(entity)
-		a.Nil(err)
-		a.Equal(want.Id, got.Id)
-		a.True(repo.AssertNumberOfCalls(t, "Save", 1))
+	t.Run("should return wrapped error because begin transaction was failed", func(t *testing.T) {
+		a := assert.New(t)
+		db, mck, err := sqlmock.New()
+		mck.ExpectBegin().WillReturnError(fmt.Errorf("error creating transaction"))
+		sqlxDb := sqlx.NewDb(db, "sqlmock")
+		repo := NewRepository(sqlxDb)
+		_, err = repo.BeginTransaction()
+		a.Error(err)
+		a.Equal("error creating transaction", err.Error())
 	})
-	t.Run("should return wrapped error", func(t *testing.T) {
+	t.Run("should return wrapped error because findByName was failed", func(t *testing.T) {
+		a := assert.New(t)
+		db, mck, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlxDb := sqlx.NewDb(db, "sqlmock")
+		mck.ExpectBegin()
+		tx, err := sqlxDb.Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
 		var repo = new(MockRepo)
 		var svc = NewService(repo)
+		repo.On("BeginTransaction").Return(tx, nil)
 		var entity = Entity{
 			Id:        1,
 			Name:      "test",
@@ -72,13 +88,120 @@ func TestSave(t *testing.T) {
 			UpdatedAt: time.Now(),
 			RoleId:    1,
 		}
-		var err = errors.New("database error")
-		var want = fmt.Errorf("error saving employee with: %w", err)
-		repo.On("Save", entity).Return(entity.Id, err)
-		var response, got = svc.Save(entity)
+		err = errors.New("database error")
+		repo.On("FindByName", tx, entity.Name).Return(false, err)
+		var want = fmt.Errorf("error finding employee: %w", err)
+		response, got := svc.Save(entity)
 		a.Empty(response)
 		a.NotNil(got)
 		a.Equal(want, got)
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByName", 1))
+		a.True(repo.AssertNumberOfCalls(t, "Save", 0))
+	})
+	t.Run("should return response with id of employee because findByName return true", func(t *testing.T) {
+		a := assert.New(t)
+		db, mck, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlxDb := sqlx.NewDb(db, "sqlmock")
+		mck.ExpectBegin()
+		tx, err := sqlxDb.Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var repo = new(MockRepo)
+		var svc = NewService(repo)
+		repo.On("BeginTransaction").Return(tx, nil)
+		var entity = Entity{
+			Id:        1,
+			Name:      "test",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			RoleId:    1,
+		}
+		err = errors.New("database error")
+		repo.On("FindByName", tx, entity.Name).Return(true, nil)
+		var want = Response{
+			Id: 1,
+		}
+		got, err := svc.Save(entity)
+		a.NotEmpty(got)
+		a.Nil(err)
+		a.Equal(want, got)
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByName", 1))
+		a.True(repo.AssertNumberOfCalls(t, "Save", 0))
+	})
+	t.Run("should return response with id of employee because findByName return true", func(t *testing.T) {
+		a := assert.New(t)
+		db, mck, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlxDb := sqlx.NewDb(db, "sqlmock")
+		mck.ExpectBegin()
+		tx, err := sqlxDb.Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var repo = new(MockRepo)
+		var svc = NewService(repo)
+		repo.On("BeginTransaction").Return(tx, nil)
+		var entity = Entity{
+			Id:        1,
+			Name:      "test",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			RoleId:    1,
+		}
+		err = errors.New("database error")
+		repo.On("FindByName", tx, entity.Name).Return(false, nil)
+		repo.On("Save", tx, entity).Return(entity.Id, err)
+		var want = fmt.Errorf("error saving employee with: %w", err)
+		response, got := svc.Save(entity)
+		a.Empty(response)
+		a.NotNil(err)
+		a.Equal(want, got)
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByName", 1))
+		a.True(repo.AssertNumberOfCalls(t, "Save", 1))
+	})
+	t.Run("should return id new employee because findByName return false", func(t *testing.T) {
+		a := assert.New(t)
+		db, mck, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlxDb := sqlx.NewDb(db, "sqlmock")
+		mck.ExpectBegin()
+		tx, err := sqlxDb.Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var repo = new(MockRepo)
+		var svc = NewService(repo)
+		repo.On("BeginTransaction").Return(tx, nil)
+		var entity = Entity{
+			Id:        1,
+			Name:      "test",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			RoleId:    1,
+		}
+		err = errors.New("database error")
+		repo.On("FindByName", tx, entity.Name).Return(false, nil)
+		repo.On("Save", tx, entity).Return(entity.Id, nil)
+		var want = Response{
+			Id: 1,
+		}
+		got, err := svc.Save(entity)
+		a.NotEmpty(got)
+		a.Nil(err)
+		a.Equal(want, got)
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByName", 1))
 		a.True(repo.AssertNumberOfCalls(t, "Save", 1))
 	})
 }

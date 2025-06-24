@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"context"
 	"github.com/jmoiron/sqlx"
 	"idm/inner/employee"
 	"os"
 )
 
 type Fixture struct {
+	db        *sqlx.DB
 	employees *employee.Repository
 }
 
@@ -21,10 +23,18 @@ func (f *Fixture) Employee(name string, roleId int64) int64 {
 		Name:   name,
 		RoleId: roleId,
 	}
-	var newId, err = f.employees.Save(entity)
+	tx, err := f.db.BeginTxx(context.Background(), nil)
 	if err != nil {
-		panic(err)
+		return -1
 	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			_ = tx.Commit()
+		}
+	}()
+	var newId, _ = f.employees.Save(tx, entity)
 	return newId
 }
 
