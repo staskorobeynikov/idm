@@ -130,7 +130,7 @@ func TestEmployeeRepository(t *testing.T) {
 			UpdatedAt: time.Now(),
 			RoleId:    newRoleId,
 		}
-		isExist, err := employeeRepository.FindByName(tx, empl.Name)
+		isExist, _ := employeeRepository.FindByName(tx, empl.Name)
 		a.False(isExist)
 		got, err := employeeRepository.Save(tx, empl)
 		a.NoError(err)
