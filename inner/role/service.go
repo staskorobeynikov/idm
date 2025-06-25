@@ -1,9 +1,13 @@
 package role
 
-import "fmt"
+import (
+	"fmt"
+	"idm/inner/common"
+)
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
 type Repo interface {
@@ -15,14 +19,26 @@ type Repo interface {
 	DeleteByIds(ids []int64) error
 }
 
-func NewService(repo Repo) Service {
+type Validator interface {
+	Validate(request any) error
+}
+
+func NewService(repo Repo, validator Validator) Service {
 	return Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
 }
 
-func (s *Service) Save(e Entity) (Response, error) {
-	var id, err = s.repo.Save(e)
+func (s *Service) Save(request CreateRequest) (Response, error) {
+	err := s.validator.Validate(request)
+	if err != nil {
+		return Response{}, common.RequestValidationError{
+			Message: err.Error(),
+		}
+	}
+	var id int64
+	id, err = s.repo.Save(request.ToEntity())
 	if err != nil {
 		return Response{}, fmt.Errorf("error saving role with: %w", err)
 	}
@@ -31,10 +47,14 @@ func (s *Service) Save(e Entity) (Response, error) {
 	}, nil
 }
 
-func (s *Service) FindById(id int64) (Response, error) {
-	var entity, err = s.repo.FindById(id)
+func (s *Service) FindById(request IdRequest) (Response, error) {
+	var err = s.validator.Validate(request)
 	if err != nil {
-		return Response{}, fmt.Errorf("error finding role with id %d: %w", id, err)
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+	entity, err := s.repo.FindById(request.Id)
+	if err != nil {
+		return Response{}, common.NotFoundError{Message: fmt.Sprintf("error finding role with id %d: %v", request.Id, err)}
 	}
 	return entity.toResponse(), nil
 }
@@ -42,7 +62,7 @@ func (s *Service) FindById(id int64) (Response, error) {
 func (s *Service) FindAll() ([]Response, error) {
 	var employees, err = s.repo.FindAll()
 	if err != nil {
-		return nil, fmt.Errorf("error finding all roles: %w", err)
+		return nil, common.NotFoundError{Message: fmt.Sprintf("error finding all roles: %v", err)}
 	}
 	var response []Response
 	for _, employee := range employees {
@@ -51,10 +71,13 @@ func (s *Service) FindAll() ([]Response, error) {
 	return response, nil
 }
 
-func (s *Service) FindByIds(ids []int64) ([]Response, error) {
-	var employees, err = s.repo.FindByIds(ids)
+func (s *Service) FindByIds(request IdsRequest) ([]Response, error) {
+	if err := s.validator.Validate(request); err != nil {
+		return []Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+	var employees, err = s.repo.FindByIds(request.Ids)
 	if err != nil {
-		return nil, fmt.Errorf("error finding roles by ids: %w", err)
+		return nil, common.NotFoundError{Message: fmt.Sprintf("error finding roles by ids: %v", err)}
 	}
 	var response []Response
 	for _, employee := range employees {
@@ -63,18 +86,25 @@ func (s *Service) FindByIds(ids []int64) ([]Response, error) {
 	return response, nil
 }
 
-func (s *Service) DeleteById(id int64) error {
-	var err = s.repo.DeleteById(id)
+func (s *Service) DeleteById(request IdRequest) error {
+	var err = s.validator.Validate(request)
 	if err != nil {
-		return fmt.Errorf("error deleting role with id %d: %w", id, err)
+		return common.RequestValidationError{Message: err.Error()}
+	}
+	err = s.repo.DeleteById(request.Id)
+	if err != nil {
+		return common.NotFoundError{Message: fmt.Sprintf("error deleting role with id %d: %v", request.Id, err)}
 	}
 	return nil
 }
 
-func (s *Service) DeleteByIds(ids []int64) error {
-	var err = s.repo.DeleteByIds(ids)
+func (s *Service) DeleteByIds(request IdsRequest) error {
+	if err := s.validator.Validate(request); err != nil {
+		return common.RequestValidationError{Message: err.Error()}
+	}
+	var err = s.repo.DeleteByIds(request.Ids)
 	if err != nil {
-		return fmt.Errorf("error deleting roles with ids %d: %w", ids, err)
+		return common.NotFoundError{Message: fmt.Sprintf("error deleting roles with ids %d: %v", request.Ids, err)}
 	}
 	return nil
 }
