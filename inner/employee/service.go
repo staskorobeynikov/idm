@@ -1,14 +1,19 @@
 package employee
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/jmoiron/sqlx"
+)
 
 type Service struct {
 	repo Repo
 }
 
 type Repo interface {
-	Save(e Entity) (int64, error)
+	BeginTransaction() (*sqlx.Tx, error)
+	Save(tx *sqlx.Tx, e Entity) (int64, error)
 	FindById(id int64) (Entity, error)
+	FindByName(tx *sqlx.Tx, name string) (bool, error)
 	FindAll() ([]Entity, error)
 	FindByIds(ids []int64) ([]Entity, error)
 	DeleteById(id int64) error
@@ -22,9 +27,41 @@ func NewService(repo Repo) *Service {
 }
 
 func (s *Service) Save(e Entity) (Response, error) {
-	var id, err = s.repo.Save(e)
+	tx, err := s.repo.BeginTransaction()
 	if err != nil {
-		return Response{}, fmt.Errorf("error saving employee with: %w", err)
+		return Response{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("creating employee panic: %v", r)
+			errTx := tx.Rollback()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else if err != nil {
+			errTx := tx.Rollback()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else {
+			errTx := tx.Commit()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: commiting transaction error: %w", errTx)
+			}
+		}
+	}()
+	isExist, err := s.repo.FindByName(tx, e.Name)
+	if err != nil {
+		return Response{}, fmt.Errorf("error finding employee: %w", err)
+	}
+	if isExist {
+		return Response{
+			Id: e.Id,
+		}, nil
+	}
+	var id, err1 = s.repo.Save(tx, e)
+	if err1 != nil {
+		return Response{}, fmt.Errorf("error saving employee with: %w", err1)
 	}
 	return Response{
 		Id: id,
