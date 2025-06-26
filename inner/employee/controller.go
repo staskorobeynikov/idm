@@ -6,6 +6,7 @@ import (
 	"idm/inner/common"
 	"idm/inner/web"
 	"strconv"
+	"strings"
 )
 
 type Controller struct {
@@ -31,11 +32,11 @@ func NewController(server *web.Server, employeeService Svc) *Controller {
 
 func (c *Controller) RegisterRoutes() {
 	c.server.GroupApiV1.Post("/employees", c.CreateEmployee)
+	c.server.GroupApiV1.Get("/employees/find", c.FindByIds)
 	c.server.GroupApiV1.Get("/employees/:id", c.FindById)
 	c.server.GroupApiV1.Get("/employees", c.FindAll)
-	c.server.GroupApiV1.Get("/employees/find", c.FindByIds)
+	c.server.GroupApiV1.Delete("/employees/delete", c.DeleteByIds)
 	c.server.GroupApiV1.Delete("/employees/:id", c.DeleteById)
-	c.server.GroupApiV1.Delete("/employees/:ids", c.DeleteByIds)
 }
 
 func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
@@ -85,10 +86,17 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 }
 
 func (c *Controller) FindByIds(ctx fiber.Ctx) error {
-	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
-		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+	idsParam := ctx.Query("ids")
+	stringIds := strings.Split(idsParam, ",")
+	var ids []int64
+	for _, id := range stringIds {
+		id, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+		}
+		ids = append(ids, id)
 	}
+	var request = IdsRequest{Ids: ids}
 	var response, err = c.employeeService.FindByIds(request)
 	if err != nil {
 		switch {
@@ -125,10 +133,17 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
-	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
-		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+	idsParam := ctx.Query("ids")
+	stringIds := strings.Split(idsParam, ",")
+	var ids []int64
+	for _, id := range stringIds {
+		id, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+		}
+		ids = append(ids, id)
 	}
+	var request = IdsRequest{Ids: ids}
 	err := c.employeeService.DeleteByIds(request)
 	if err != nil {
 		switch {
@@ -140,5 +155,9 @@ func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
-	return common.OkResponse(ctx, Response{Id: int64(0)})
+	var responses []Response
+	for _, id := range ids {
+		responses = append(responses, Response{Id: int64(id)})
+	}
+	return common.OkResponse(ctx, responses)
 }
