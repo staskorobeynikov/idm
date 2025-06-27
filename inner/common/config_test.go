@@ -12,6 +12,8 @@ func TestEnvFileNotExistThenGetConfigFromEnvVars(t *testing.T) {
 	_ = assert.New(t)
 	t.Setenv("DB_DRIVER_NAME", "postgres")
 	t.Setenv("DB_DSN", dsn)
+	t.Setenv("APP_NAME", "idm")
+	t.Setenv("APP_VERSION", "1.0.0")
 	config := GetConfig("")
 	assert.Equal(t, "postgres", config.DbDriverName)
 	assert.Equal(t, dsn, config.Dsn)
@@ -19,19 +21,30 @@ func TestEnvFileNotExistThenGetConfigFromEnvVars(t *testing.T) {
 
 func TestEnvFileExistHaventVarsThenGetEmptyConfig(t *testing.T) {
 	_ = assert.New(t)
+	defer func() {
+		r := recover()
+		assert.NotNil(t, r)
+		assert.Equal(t, "config validation error: Key: 'Config.DbDriverName' Error:Field validation for "+
+			"'DbDriverName' failed on the 'required' tag\nKey: 'Config.Dsn' Error:Field validation for 'Dsn' failed "+
+			"on the 'required' tag\nKey: 'Config.AppName' Error:Field validation for 'AppName' failed on the "+
+			"'required' tag\nKey: 'Config.AppVersion' Error:Field validation for 'AppVersion' failed on the "+
+			"'required' tag", r)
+	}()
 	t.Setenv("DB_DRIVER_NAME", "")
 	t.Setenv("DB_DSN", "")
+	t.Setenv("APP_NAME", "")
+	t.Setenv("APP_VERSION", "")
 	file := createEnvFile(t, "")
 	defer os.Remove(file)
-	config := GetConfig(file)
-	assert.Equal(t, "", config.Dsn)
-	assert.Equal(t, "", config.DbDriverName)
+	_ = GetConfig(file)
 }
 
 func TestEnvFileExistHaventVarsInEnvFileThenGetValidConfig(t *testing.T) {
 	_ = assert.New(t)
 	t.Setenv("DB_DRIVER_NAME", "postgres")
 	t.Setenv("DB_DSN", dsn)
+	t.Setenv("APP_NAME", "idm")
+	t.Setenv("APP_VERSION", "1.0.0")
 	file := createEnvFile(t, "")
 	defer os.Remove(file)
 	config := GetConfig(file)
@@ -41,7 +54,7 @@ func TestEnvFileExistHaventVarsInEnvFileThenGetValidConfig(t *testing.T) {
 
 func TestEnvFileExistHaveVarsInEnvFileThenGetValidConfig(t *testing.T) {
 	_ = assert.New(t)
-	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn")
+	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0")
 	defer os.Remove(file)
 	config := GetConfig(file)
 	assert.Equal(t, "random_driver", config.DbDriverName)
@@ -52,7 +65,7 @@ func TestEnvFileExistHaveVarsInEnvFileAndEnvVarsThenGetValidConfig(t *testing.T)
 	_ = assert.New(t)
 	t.Setenv("DB_DRIVER_NAME", "postgres")
 	t.Setenv("DB_DSN", dsn)
-	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn")
+	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0")
 	defer os.Remove(file)
 	config := GetConfig(file)
 	assert.Equal(t, "postgres", config.DbDriverName)
