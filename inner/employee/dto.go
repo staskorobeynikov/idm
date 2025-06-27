@@ -25,3 +25,23 @@ func (e *Entity) toResponse() Response {
 		UpdatedAt: e.UpdatedAt,
 	}
 }
+
+type CreateRequest struct {
+	Name   string `json:"name" validate:"required,min=2,max=155"`
+	RoleId int64  `json:"role_id" validate:"required,min=1"`
+}
+
+func (req *CreateRequest) ToEntity() Entity {
+	return Entity{
+		Name:   req.Name,
+		RoleId: req.RoleId,
+	}
+}
+
+type IdRequest struct {
+	Id int64 `json:"id" validate:"required,min=1"`
+}
+
+type IdsRequest struct {
+	Ids []int64 `json:"ids" validate:"required,min=1,dive"`
+}
