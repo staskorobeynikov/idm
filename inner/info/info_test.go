@@ -24,7 +24,7 @@ func TestGetInfo(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg)
+		controller := NewController(server, cfg, nil)
 		controller.db = sqlx.NewDb(nil, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/info", nil)
@@ -48,7 +48,7 @@ func TestGetHealth(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg)
+		controller := NewController(server, cfg, nil)
 		controller.db = sqlx.NewDb(db, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/health", nil)
@@ -68,7 +68,7 @@ func TestGetHealth(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg)
+		controller := NewController(server, cfg, nil)
 		controller.db = sqlx.NewDb(db, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/health", nil)

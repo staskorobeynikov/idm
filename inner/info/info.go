@@ -15,10 +15,11 @@ type Controller struct {
 	db     *sqlx.DB
 }
 
-func NewController(server *web.Server, cfg common.Config) *Controller {
+func NewController(server *web.Server, cfg common.Config, db *sqlx.DB) *Controller {
 	return &Controller{
 		server: server,
 		cfg:    cfg,
+		db:     db,
 	}
 }
 
