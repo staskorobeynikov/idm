@@ -3,6 +3,7 @@ package employee
 import (
 	"errors"
 	"github.com/gofiber/fiber/v3"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 type Controller struct {
 	server          *web.Server
 	employeeService Svc
+	logger          *common.Logger
 }
 
 type Svc interface {
@@ -23,10 +25,15 @@ type Svc interface {
 	DeleteByIds(request IdsRequest) error
 }
 
-func NewController(server *web.Server, employeeService Svc) *Controller {
+func NewController(
+	server *web.Server,
+	employeeService Svc,
+	logger *common.Logger,
+) *Controller {
 	return &Controller{
 		server:          server,
 		employeeService: employeeService,
+		logger:          logger,
 	}
 }
 
@@ -42,14 +49,18 @@ func (c *Controller) RegisterRoutes() {
 func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
 	var request CreateRequest
 	if err := ctx.Bind().Body(&request); err != nil {
+		c.logger.Error("create employee", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
+	c.logger.Info("create employee: received request", zap.Any("request", request))
 	var response, err = c.employeeService.Save(request)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
+			c.logger.Error("create employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
+			c.logger.Error("create employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
@@ -60,17 +71,22 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 	var param = ctx.Params("id")
 	id, err := strconv.Atoi(param)
 	if err != nil {
+		c.logger.Error("find by id employee", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 	request := IdRequest{Id: int64(id)}
+	c.logger.Info("find by id employee: received request", zap.Any("request", request))
 	response, err := c.employeeService.FindById(request)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.RequestValidationError{}):
+			c.logger.Error("find by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		case errors.As(err, &common.NotFoundError{}):
+			c.logger.Error("find by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusOK, err.Error())
 		default:
+			c.logger.Error("find by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
@@ -80,6 +96,7 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 func (c *Controller) FindAll(ctx fiber.Ctx) error {
 	response, err := c.employeeService.FindAll()
 	if err != nil {
+		c.logger.Error("find all employees", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusOK, err.Error())
 	}
 	return common.OkResponse(ctx, response)
@@ -97,14 +114,18 @@ func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 	var request = IdsRequest{Ids: ids}
+	c.logger.Info("find by ids employees: received request", zap.Any("request", request))
 	var response, err = c.employeeService.FindByIds(request)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.RequestValidationError{}):
+			c.logger.Error("find by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		case errors.As(err, &common.NotFoundError{}):
+			c.logger.Error("find by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusOK, err.Error())
 		default:
+			c.logger.Error("find by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
@@ -118,14 +139,18 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 	request := IdRequest{Id: int64(id)}
+	c.logger.Info("delete by id employee: received request", zap.Any("request", request))
 	err = c.employeeService.DeleteById(request)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.RequestValidationError{}):
+			c.logger.Error("delete by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		case errors.As(err, &common.NotFoundError{}):
+			c.logger.Error("delete by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusOK, err.Error())
 		default:
+			c.logger.Error("delete by id employee", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
@@ -144,14 +169,18 @@ func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 	var request = IdsRequest{Ids: ids}
+	c.logger.Info("delete by ids employees: received request", zap.Any("request", request))
 	err := c.employeeService.DeleteByIds(request)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.RequestValidationError{}):
+			c.logger.Error("delete by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		case errors.As(err, &common.NotFoundError{}):
+			c.logger.Error("delete by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusOK, err.Error())
 		default:
+			c.logger.Error("delete by ids employees", zap.Error(err))
 			return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
