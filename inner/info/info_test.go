@@ -5,12 +5,15 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
+
+var logger = &common.Logger{Logger: zap.NewNop()}
 
 func TestGetInfo(t *testing.T) {
 	var a = assert.New(t)
@@ -24,7 +27,7 @@ func TestGetInfo(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg, nil)
+		controller := NewController(server, cfg, nil, logger)
 		controller.db = sqlx.NewDb(nil, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/info", nil)
@@ -48,7 +51,7 @@ func TestGetHealth(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg, nil)
+		controller := NewController(server, cfg, nil, logger)
 		controller.db = sqlx.NewDb(db, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/health", nil)
@@ -68,7 +71,7 @@ func TestGetHealth(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := NewController(server, cfg, nil)
+		controller := NewController(server, cfg, nil, logger)
 		controller.db = sqlx.NewDb(db, "sqlmock")
 		controller.RegisterRoutes()
 		request := httptest.NewRequest(http.MethodGet, "/internal/health", nil)

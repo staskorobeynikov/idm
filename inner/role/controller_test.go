@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"io"
@@ -48,12 +49,14 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 	return args.Error(0)
 }
 
+var logger = &common.Logger{Logger: zap.NewNop()}
+
 func TestCreateRole(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("create role without error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var body = strings.NewReader("{\"name\": \"john doe\"}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/roles", body)
@@ -75,7 +78,7 @@ func TestCreateRole(t *testing.T) {
 	t.Run("create role validation error - name required", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var body = strings.NewReader("{\"name\": \"\"}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/roles", body)
@@ -102,7 +105,7 @@ func TestFindRoleById(t *testing.T) {
 	t.Run("find role by id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -121,7 +124,7 @@ func TestFindRoleById(t *testing.T) {
 	t.Run("find role - incorrect id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/ffff", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -133,7 +136,7 @@ func TestFindRoleById(t *testing.T) {
 	t.Run("find role - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/0", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -155,7 +158,7 @@ func TestFindRoleById(t *testing.T) {
 	t.Run("find role - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -181,7 +184,7 @@ func TestFindAllRoles(t *testing.T) {
 	t.Run("find all roles", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -206,7 +209,7 @@ func TestFindAllRoles(t *testing.T) {
 	t.Run("find all with error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -232,7 +235,7 @@ func TestFindRolesByIds(t *testing.T) {
 	t.Run("find roles by ids", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -256,7 +259,7 @@ func TestFindRolesByIds(t *testing.T) {
 	t.Run("find roles by ids - error parsing", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/find?ids=fff,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -281,7 +284,7 @@ func TestFindRolesByIds(t *testing.T) {
 	t.Run("find roles by ids - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -303,7 +306,7 @@ func TestFindRolesByIds(t *testing.T) {
 	t.Run("find roles by ids - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -329,7 +332,7 @@ func TestDeleteRoleById(t *testing.T) {
 	t.Run("find role by id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -348,7 +351,7 @@ func TestDeleteRoleById(t *testing.T) {
 	t.Run("find role - incorrect id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/ffff", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -360,7 +363,7 @@ func TestDeleteRoleById(t *testing.T) {
 	t.Run("find role - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/0", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -382,7 +385,7 @@ func TestDeleteRoleById(t *testing.T) {
 	t.Run("find role - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -408,7 +411,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 	t.Run("delete roles by ids", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -432,7 +435,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 	t.Run("delete roles by ids - error parsing", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/delete?ids=fff,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -452,7 +455,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 	t.Run("delete roles by ids - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -474,7 +477,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 	t.Run("delete roles by ids - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc)
+		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")

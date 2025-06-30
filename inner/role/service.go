@@ -23,8 +23,8 @@ type Validator interface {
 	Validate(request any) error
 }
 
-func NewService(repo Repo, validator Validator) Service {
-	return Service{
+func NewService(repo Repo, validator Validator) *Service {
+	return &Service{
 		repo:      repo,
 		validator: validator,
 	}

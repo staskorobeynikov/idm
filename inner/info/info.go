@@ -13,13 +13,20 @@ type Controller struct {
 	server *web.Server
 	cfg    common.Config
 	db     *sqlx.DB
+	logger *common.Logger
 }
 
-func NewController(server *web.Server, cfg common.Config, db *sqlx.DB) *Controller {
+func NewController(
+	server *web.Server,
+	cfg common.Config,
+	db *sqlx.DB,
+	logger *common.Logger,
+) *Controller {
 	return &Controller{
 		server: server,
 		cfg:    cfg,
 		db:     db,
+		logger: logger,
 	}
 }
 
@@ -39,6 +46,7 @@ func (c *Controller) GetInfo(ctx fiber.Ctx) error {
 		Version: c.cfg.AppVersion,
 	})
 	if err != nil {
+		c.logger.Error("error returning info")
 		return common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning info")
 	}
 	return nil
@@ -47,11 +55,12 @@ func (c *Controller) GetInfo(ctx fiber.Ctx) error {
 func (c *Controller) GetHealth(ctx fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-
 	if err := c.db.PingContext(ctxWithTimeout); err != nil {
+		c.logger.Error("error returning health")
 		return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 	}
 	if err := ctx.Status(fiber.StatusOK).SendString("OK"); err != nil {
+		c.logger.Error("error returning health")
 		return common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 	}
 	return nil
