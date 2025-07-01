@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/database"
 	"idm/inner/employee"
@@ -17,53 +18,59 @@ import (
 )
 
 func main() {
-	var server = build()
+	cfg := common.GetConfig(".env")
+	var logger = common.NewLogger(cfg)
+	defer func() { _ = logger.Sync() }()
+	db := database.ConnectDbWithCfg(cfg)
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("error closing db", zap.Error(err))
+		}
+	}()
+	var server = build(cfg, logger, db)
 	go func() {
 		var err = server.App.Listen(":8080")
 		if err != nil {
-			panic(fmt.Sprintf("http server error: %s", err))
+			logger.Panic("http server error: %s", zap.Error(err))
 		}
 	}()
 	var wg = &sync.WaitGroup{}
 	wg.Add(1)
-	go gracefulShutdown(server, wg)
+	go gracefulShutdown(server, wg, logger)
 	wg.Wait()
-	fmt.Println("Graceful shutdown complete.")
+	logger.Info("Graceful shutdown complete.")
 }
 
-func gracefulShutdown(server *web.Server, wg *sync.WaitGroup) {
+func gracefulShutdown(
+	server *web.Server,
+	wg *sync.WaitGroup,
+	logger *common.Logger,
+) {
 	defer wg.Done()
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	defer stop()
 	<-ctx.Done()
-	fmt.Println("shutting down gracefully, press Ctrl+C again to force")
+	logger.Info("shutting down gracefully, press Ctrl+C again to force")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.App.ShutdownWithContext(ctx); err != nil {
-		fmt.Printf("Server forced to shutdown with error: %v\n", err)
+		logger.Error("Server forced to shutdown with error", zap.Error(err))
 	}
-	fmt.Println("Server exiting")
+	logger.Info("Server exiting")
 }
 
-func build() *web.Server {
-	cfg := common.GetConfig(".env")
-	db := database.ConnectDbWithCfg(cfg)
-	defer func() {
-		if err := db.Close(); err != nil {
-			fmt.Printf("error closing db: %v", err)
-		}
-	}()
+func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
 	var server = web.NewServer()
 	var employeeRepo = employee.NewRepository(db)
 	var roleRepo = role.NewRepository(db)
 	var vld = validator.New()
 	var employeeService = employee.NewService(employeeRepo, vld)
-	var employeeController = employee.NewController(server, employeeService)
+	var employeeController = employee.NewController(server, employeeService, logger)
 	employeeController.RegisterRoutes()
 	var roleService = role.NewService(roleRepo, vld)
-	var roleController = role.NewController(server, &roleService)
+	var roleController = role.NewController(server, roleService, logger)
 	roleController.RegisterRoutes()
-	var infoController = info.NewController(server, cfg, db)
+	var infoController = info.NewController(server, cfg, db, logger)
 	infoController.RegisterRoutes()
 	return server
 }
