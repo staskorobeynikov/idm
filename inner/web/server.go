@@ -2,6 +2,8 @@ package web
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/requestid"
 )
 
 type Server struct {
@@ -10,8 +12,14 @@ type Server struct {
 	GroupInternal fiber.Router
 }
 
+func registerMiddleware(app *fiber.App) {
+	app.Use(recover.New())
+	app.Use(requestid.New())
+}
+
 func NewServer() *Server {
 	app := fiber.New()
+	registerMiddleware(app)
 	groupInternal := app.Group("/internal")
 	groupApi := app.Group("/api")
 	groupApiV1 := groupApi.Group("/v1")
