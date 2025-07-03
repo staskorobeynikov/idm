@@ -83,6 +83,20 @@ func (r *Repository) FindByIds(ids []int64) ([]Entity, error) {
 	return employees, nil
 }
 
+func (r *Repository) FindWithOffset(offset int, limit int) ([]Entity, error) {
+	var employees []Entity
+	query := `
+			SELECT * FROM employee
+			ORDER BY id
+			OFFSET $1 LIMIT $2 
+	`
+	err := r.db.Select(&employees, query, offset, limit)
+	if err != nil {
+		return employees, err
+	}
+	return employees, nil
+}
+
 func (r *Repository) DeleteById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM employee WHERE id = $1", id)
 	if err != nil {

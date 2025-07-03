@@ -18,6 +18,7 @@ type Repo interface {
 	FindByName(tx *sqlx.Tx, name string) (bool, error)
 	FindAll() ([]Entity, error)
 	FindByIds(ids []int64) ([]Entity, error)
+	FindWithOffset(offset int, limit int) ([]Entity, error)
 	DeleteById(id int64) error
 	DeleteByIds(ids []int64) error
 }
@@ -117,6 +118,26 @@ func (s *Service) FindByIds(request IdsRequest) ([]Response, error) {
 		response = append(response, employee.toResponse())
 	}
 	return response, nil
+}
+
+func (s *Service) FindWithOffset(request PageRequest) (PageResponse, error) {
+	if err := s.validator.Validate(request); err != nil {
+		return PageResponse{}, common.RequestValidationError{Message: err.Error()}
+	}
+	employees, err := s.repo.FindWithOffset(request.PageSize*request.PageNumber, request.PageSize)
+	if err != nil {
+		return PageResponse{}, common.NotFoundError{Message: fmt.Sprintf("error finding employees with offset: %v", err)}
+	}
+	var response []Response
+	for _, employee := range employees {
+		response = append(response, employee.toResponse())
+	}
+	return PageResponse{
+		Result:     response,
+		PageSize:   request.PageSize,
+		PageNumber: request.PageNumber,
+		Total:      int64(len(response)),
+	}, nil
 }
 
 func (s *Service) DeleteById(request IdRequest) error {
