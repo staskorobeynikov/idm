@@ -8,6 +8,7 @@ import (
 	"idm/inner/database"
 	"idm/inner/employee"
 	"idm/inner/info"
+	"idm/inner/middleware"
 	"idm/inner/role"
 	"idm/inner/validator"
 	"idm/inner/web"
@@ -61,11 +62,12 @@ func gracefulShutdown(
 
 func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
 	var server = web.NewServer()
+	server.App.Use(middleware.LoggerMiddleware(logger.Logger))
 	var employeeRepo = employee.NewRepository(db)
 	var roleRepo = role.NewRepository(db)
 	var vld = validator.New()
 	var employeeService = employee.NewService(employeeRepo, vld)
-	var employeeController = employee.NewController(server, employeeService, logger)
+	var employeeController = employee.NewController(server, employeeService)
 	employeeController.RegisterRoutes()
 	var roleService = role.NewService(roleRepo, vld)
 	var roleController = role.NewController(server, roleService, logger)

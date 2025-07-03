@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"io"
@@ -49,14 +48,12 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 	return args.Error(0)
 }
 
-var logger = &common.Logger{Logger: zap.NewNop()}
-
 func TestCreateEmployee(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("create employee without error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
@@ -78,7 +75,7 @@ func TestCreateEmployee(t *testing.T) {
 	t.Run("create employee validation error - name required", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var body = strings.NewReader("{\"name\": \"\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
@@ -101,7 +98,7 @@ func TestCreateEmployee(t *testing.T) {
 	t.Run("create employee validation error - short name", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
@@ -128,7 +125,7 @@ func TestFindEmployeeById(t *testing.T) {
 	t.Run("find employee by id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -147,7 +144,7 @@ func TestFindEmployeeById(t *testing.T) {
 	t.Run("find employee - incorrect id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/ffff", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -159,7 +156,7 @@ func TestFindEmployeeById(t *testing.T) {
 	t.Run("find employee - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/0", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -181,7 +178,7 @@ func TestFindEmployeeById(t *testing.T) {
 	t.Run("find employee - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -207,7 +204,7 @@ func TestFindAllEmployees(t *testing.T) {
 	t.Run("find all employees", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -232,7 +229,7 @@ func TestFindAllEmployees(t *testing.T) {
 	t.Run("find all with error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -258,7 +255,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 	t.Run("find employees by ids", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -282,7 +279,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 	t.Run("find employees by ids - error parsing", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/find?ids=fff,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -307,7 +304,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 	t.Run("find employees by ids - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -329,7 +326,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 	t.Run("find employees by ids - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodGet, "/api/v1/employees/find?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -355,7 +352,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 	t.Run("find employee by id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -374,7 +371,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 	t.Run("find employee - incorrect id", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/ffff", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -386,7 +383,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 	t.Run("find employee - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/0", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -408,7 +405,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 	t.Run("find employee - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/123", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -434,7 +431,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 	t.Run("delete employees by ids", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -458,7 +455,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 	t.Run("delete employees by ids - error parsing", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/delete?ids=fff,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -478,7 +475,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 	t.Run("delete employees by ids - validation error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
@@ -500,7 +497,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 	t.Run("delete employees by ids - not found error", func(t *testing.T) {
 		server := web.NewServer()
 		var svc = new(MockService)
-		var controller = NewController(server, svc, logger)
+		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
 		var request = httptest.NewRequest(fiber.MethodDelete, "/api/v1/employees/delete?ids=123,124,125", nil)
 		request.Header.Add("Content-Type", "application/json")
