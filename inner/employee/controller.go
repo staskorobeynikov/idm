@@ -85,9 +85,11 @@ func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
 		logger.Error("parse page number with error: ", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
+	textFilter := ctx.Query("textFilter", "")
 	request := PageRequest{
 		PageSize:   pageSize,
 		PageNumber: pageNumber,
+		TextFilter: textFilter,
 	}
 	logger.Info("find employees with offset", zap.Any("request", request))
 	response, err := c.employeeService.FindWithOffset(request)

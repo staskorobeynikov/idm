@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -83,14 +84,19 @@ func (r *Repository) FindByIds(ids []int64) ([]Entity, error) {
 	return employees, nil
 }
 
-func (r *Repository) FindWithOffset(offset int, limit int) ([]Entity, error) {
+func (r *Repository) FindWithOffset(offset int, limit int, filter string) ([]Entity, error) {
 	var employees []Entity
-	query := `
-			SELECT * FROM employee
-			ORDER BY id
-			OFFSET $1 LIMIT $2 
-	`
-	err := r.db.Select(&employees, query, offset, limit)
+	query := "SELECT * FROM employee WHERE 1 = 1"
+	var args []interface{}
+	paramIdx := 1
+	if filter != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", paramIdx)
+		args = append(args, "%"+filter+"%")
+		paramIdx++
+	}
+	query += fmt.Sprintf(" ORDER BY id OFFSET $%d LIMIT $%d", paramIdx, paramIdx+1)
+	args = append(args, offset, limit)
+	err := r.db.Select(&employees, query, args...)
 	if err != nil {
 		return employees, err
 	}
