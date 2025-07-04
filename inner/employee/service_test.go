@@ -48,6 +48,11 @@ func (r *MockRepo) FindByIds(ids []int64) ([]Entity, error) {
 	return args.Get(0).([]Entity), args.Error(1)
 }
 
+func (r *MockRepo) FindWithOffset(offset int, limit int) ([]Entity, error) {
+	args := r.Called(offset, limit)
+	return args.Get(0).([]Entity), args.Error(1)
+}
+
 func (r *MockRepo) DeleteById(id int64) error {
 	args := r.Called(id)
 	return args.Error(0)
@@ -474,6 +479,45 @@ func TestIdsRequest(t *testing.T) {
 			Ids: []int64{},
 		})
 		want := "Key: 'IdsRequest.Ids' Error:Field validation for 'Ids' failed on the 'min' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+}
+
+func TestPageRequest(t *testing.T) {
+	a := assert.New(t)
+	v := validator.New()
+	t.Run("correct page", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   5,
+			PageNumber: 5,
+		})
+		a.Nil(err)
+	})
+	t.Run("incorrect page - PageSize < 1", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   0,
+			PageNumber: 5,
+		})
+		want := "Key: 'PageRequest.PageSize' Error:Field validation for 'PageSize' failed on the 'min' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - PageSize > 105", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   105,
+			PageNumber: 5,
+		})
+		want := "Key: 'PageRequest.PageSize' Error:Field validation for 'PageSize' failed on the 'max' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - PageNumber < 0", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: -1,
+		})
+		want := "Key: 'PageRequest.PageNumber' Error:Field validation for 'PageNumber' failed on the 'min' tag"
 		a.Error(err)
 		a.Equal(want, err.Error())
 	})

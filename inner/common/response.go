@@ -8,6 +8,13 @@ type Response[T any] struct {
 	Data    T      `json:"data"`
 }
 
+type PageResponse[T any] struct {
+	Result     any   `json:"result"`
+	PageSize   int   `json:"page_size" `
+	PageNumber int   `json:"page_number"`
+	Total      int64 `json:"total"`
+}
+
 func ErrResponse(
 	c fiber.Ctx,
 	code int,

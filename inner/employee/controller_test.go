@@ -38,6 +38,11 @@ func (svc *MockService) FindByIds(request IdsRequest) ([]Response, error) {
 	return args.Get(0).([]Response), args.Error(1)
 }
 
+func (svc *MockService) FindWithOffset(request PageRequest) (PageResponse, error) {
+	args := svc.Called(request)
+	return args.Get(0).(PageResponse), args.Error(1)
+}
+
 func (svc *MockService) DeleteById(request IdRequest) error {
 	args := svc.Called(request)
 	return args.Error(0)
