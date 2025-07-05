@@ -21,10 +21,12 @@ func registerMiddleware(app *fiber.App) {
 	app.Use(requestid.New())
 }
 
-func NewServer() *Server {
+func NewServer(enableSwagger bool) *Server {
 	app := fiber.New()
 	registerMiddleware(app)
-	go startSwaggerServer()
+	if enableSwagger {
+		go startSwaggerServer()
+	}
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:8081/"}, // Swagger UI порт
 	}))

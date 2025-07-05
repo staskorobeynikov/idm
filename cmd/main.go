@@ -68,7 +68,7 @@ func gracefulShutdown(
 }
 
 func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
-	var server = web.NewServer()
+	var server = web.NewServer(true)
 	server.App.Use(middleware.LoggerMiddleware(logger.Logger))
 	var employeeRepo = employee.NewRepository(db)
 	var roleRepo = role.NewRepository(db)
