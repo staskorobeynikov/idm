@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
+	"idm/docs"
 	"idm/inner/common"
 	"idm/inner/database"
 	"idm/inner/employee"
@@ -18,8 +19,14 @@ import (
 	"time"
 )
 
+// @title IDM API documentation
+// @description  API for managing IDM service
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
 func main() {
 	cfg := common.GetConfig(".env")
+	docs.SwaggerInfo.Version = cfg.AppVersion
 	var logger = common.NewLogger(cfg)
 	defer func() { _ = logger.Sync() }()
 	db := database.ConnectDbWithCfg(cfg)
