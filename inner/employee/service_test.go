@@ -48,8 +48,8 @@ func (r *MockRepo) FindByIds(ids []int64) ([]Entity, error) {
 	return args.Get(0).([]Entity), args.Error(1)
 }
 
-func (r *MockRepo) FindWithOffset(offset int, limit int) ([]Entity, error) {
-	args := r.Called(offset, limit)
+func (r *MockRepo) FindWithOffset(offset int, limit int, filter string) ([]Entity, error) {
+	args := r.Called(offset, limit, filter)
 	return args.Get(0).([]Entity), args.Error(1)
 }
 
@@ -520,5 +520,53 @@ func TestPageRequest(t *testing.T) {
 		want := "Key: 'PageRequest.PageNumber' Error:Field validation for 'PageNumber' failed on the 'min' tag"
 		a.Error(err)
 		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - TextFilter is empty", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: -1,
+			TextFilter: "",
+		})
+		want := "Key: 'PageRequest.PageNumber' Error:Field validation for 'PageNumber' failed on the 'min' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - TextFilter is space symbols", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: 1,
+			TextFilter: "    ",
+		})
+		want := "Key: 'PageRequest.TextFilter' Error:Field validation for 'TextFilter' failed on the 'minnows3' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - TextFilter is \n symbols", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: 1,
+			TextFilter: "\n\n\n",
+		})
+		want := "Key: 'PageRequest.TextFilter' Error:Field validation for 'TextFilter' failed on the 'minnows3' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("incorrect page - TextFilter has not enough text symbols", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: 1,
+			TextFilter: "a  b ",
+		})
+		want := "Key: 'PageRequest.TextFilter' Error:Field validation for 'TextFilter' failed on the 'minnows3' tag"
+		a.Error(err)
+		a.Equal(want, err.Error())
+	})
+	t.Run("correct page", func(t *testing.T) {
+		err := v.Validate(PageRequest{
+			PageSize:   50,
+			PageNumber: 1,
+			TextFilter: "a  b c d",
+		})
+		a.NoError(err)
 	})
 }

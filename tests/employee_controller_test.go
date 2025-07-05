@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -162,6 +163,89 @@ func TestEmployeeControllerFindWithOffset(t *testing.T) {
 		a.Nil(err)
 		a.NotEmpty(responseBody)
 		a.Equal(5, len(responseBody.Data.Result))
+		clearDatabase()
+	})
+	t.Run("get employees with offset - page 0, size 3, textFilter is empty", func(t *testing.T) {
+		_ = emplFixture.Employee("Test Name", newRoleId)
+		_ = emplFixture.Employee("Test Name 1", newRoleId)
+		_ = emplFixture.Employee("Test Name 2", newRoleId)
+		_ = emplFixture.Employee("Test Name 3", newRoleId)
+		_ = emplFixture.Employee("Test Name 4", newRoleId)
+		var request = httptest.NewRequest(http.MethodGet, "/api/v1/employees/page?pageNumber=0&pageSize=3&textFilter=", nil)
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.Equal(http.StatusOK, resp.StatusCode)
+		a.NotEmpty(resp)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[employee.PageResponse]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.NotEmpty(responseBody)
+		a.Equal(3, len(responseBody.Data.Result))
+		clearDatabase()
+	})
+	t.Run("get employees with offset - page 0, size 3, textFilter has only space symbol", func(t *testing.T) {
+		_ = emplFixture.Employee("Test Name", newRoleId)
+		_ = emplFixture.Employee("Test Name 1", newRoleId)
+		_ = emplFixture.Employee("Test Name 2", newRoleId)
+		_ = emplFixture.Employee("Test Name 3", newRoleId)
+		_ = emplFixture.Employee("Test Name 4", newRoleId)
+		filter := url.QueryEscape("   ")
+		var request = httptest.NewRequest(http.MethodGet, "/api/v1/employees/page?pageNumber=0&pageSize=3&textFilter="+filter, nil)
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.Equal(http.StatusBadRequest, resp.StatusCode)
+		a.NotEmpty(resp)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[employee.PageResponse]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.NotEmpty(responseBody)
+		want := "Key: 'PageRequest.TextFilter' Error:Field validation for 'TextFilter' failed on the 'minnows3' tag"
+		a.Equal(want, responseBody.Message)
+		clearDatabase()
+	})
+	t.Run("get employees with offset - page 0, size 3, textFilter has not enough symbol", func(t *testing.T) {
+		_ = emplFixture.Employee("Test Name", newRoleId)
+		_ = emplFixture.Employee("Test Name 1", newRoleId)
+		_ = emplFixture.Employee("Test Name 2", newRoleId)
+		_ = emplFixture.Employee("Test Name 3", newRoleId)
+		_ = emplFixture.Employee("Test Name 4", newRoleId)
+		var request = httptest.NewRequest(http.MethodGet, "/api/v1/employees/page?pageNumber=0&pageSize=3&textFilter=ab", nil)
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.Equal(http.StatusBadRequest, resp.StatusCode)
+		a.NotEmpty(resp)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[employee.PageResponse]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.NotEmpty(responseBody)
+		want := "Key: 'PageRequest.TextFilter' Error:Field validation for 'TextFilter' failed on the 'minnows3' tag"
+		a.Equal(want, responseBody.Message)
+		clearDatabase()
+	})
+	t.Run("get employees with offset - page 0, size 3, textFilter is valid", func(t *testing.T) {
+		_ = emplFixture.Employee("Test Name", newRoleId)
+		_ = emplFixture.Employee("Test Name 1", newRoleId)
+		_ = emplFixture.Employee("Test Name 2", newRoleId)
+		_ = emplFixture.Employee("Test Name 3", newRoleId)
+		_ = emplFixture.Employee("Test Name 4", newRoleId)
+		var request = httptest.NewRequest(http.MethodGet, "/api/v1/employees/page?pageNumber=0&pageSize=3&textFilter=test", nil)
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.Equal(http.StatusOK, resp.StatusCode)
+		a.NotEmpty(resp)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[employee.PageResponse]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.NotEmpty(responseBody)
+		a.Equal(3, len(responseBody.Data.Result))
 		clearDatabase()
 	})
 }

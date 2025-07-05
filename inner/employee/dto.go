@@ -31,8 +31,9 @@ type IdsRequest struct {
 }
 
 type PageRequest struct {
-	PageSize   int `validate:"min=1,max=100"`
-	PageNumber int `validate:"min=0"`
+	PageSize   int    `validate:"min=1,max=100"`
+	PageNumber int    `validate:"min=0"`
+	TextFilter string `validate:"omitempty,minnows3"`
 }
 
 type PageResponse struct {
