@@ -39,4 +39,6 @@ go.work.sum
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
-/docs/
+/docs/docs.go
+/docs/swagger.json
+/docs/swagger.yaml
