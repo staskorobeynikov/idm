@@ -56,7 +56,7 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 func TestCreateEmployee(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("create employee without error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -78,7 +78,7 @@ func TestCreateEmployee(t *testing.T) {
 		a.Empty(responseBody.Message)
 	})
 	t.Run("create employee validation error - name required", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -101,7 +101,7 @@ func TestCreateEmployee(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("create employee validation error - short name", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -128,7 +128,7 @@ func TestCreateEmployee(t *testing.T) {
 func TestFindEmployeeById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employee by id", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -147,7 +147,7 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find employee - incorrect id", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -159,7 +159,7 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find employee - validation error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -181,7 +181,7 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employee - not found error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -207,7 +207,7 @@ func TestFindEmployeeById(t *testing.T) {
 func TestFindAllEmployees(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find all employees", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -232,7 +232,7 @@ func TestFindAllEmployees(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find all with error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -258,7 +258,7 @@ func TestFindAllEmployees(t *testing.T) {
 func TestFindEmployeesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employees by ids", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -282,7 +282,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find employees by ids - error parsing", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -307,7 +307,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employees by ids - validation error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -329,7 +329,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employees by ids - not found error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -355,7 +355,7 @@ func TestFindEmployeesByIds(t *testing.T) {
 func TestDeleteEmployeeById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employee by id", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -374,7 +374,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find employee - incorrect id", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -386,7 +386,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find employee - validation error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -408,7 +408,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employee - not found error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -434,7 +434,7 @@ func TestDeleteEmployeeById(t *testing.T) {
 func TestDeleteEmployeesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("delete employees by ids", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -458,7 +458,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("delete employees by ids - error parsing", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -478,7 +478,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete employees by ids - validation error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -500,7 +500,7 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete employees by ids - not found error", func(t *testing.T) {
-		server := web.NewServer()
+		server := web.NewServer(false)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()

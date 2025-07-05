@@ -41,7 +41,7 @@ func TestEmployeeControllerFindWithOffset(t *testing.T) {
 	_ = emplFixture.CreateDatabase(db)
 	v := validator.New()
 	var employeeService = employee.NewService(employeeRepository, v)
-	server := web.NewServer()
+	server := web.NewServer(false)
 	var employeeController = employee.NewController(server, employeeService)
 	employeeController.RegisterRoutes()
 	t.Run("get employees with offset - page 0, size 3", func(t *testing.T) {
