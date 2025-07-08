@@ -1,0 +1,301 @@
+basePath: /api/v1
+definitions:
+  common.PageResponse-array_employee_Response:
+    properties:
+      page_number:
+        type: integer
+      page_size:
+        type: integer
+      result: {}
+      total:
+        type: integer
+    type: object
+  common.Response-array_employee_Response:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/employee.Response'
+        type: array
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  common.Response-array_int64:
+    properties:
+      data:
+        items:
+          type: integer
+        type: array
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  common.Response-employee_Response:
+    properties:
+      data:
+        $ref: '#/definitions/employee.Response'
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  common.Response-int64:
+    properties:
+      data:
+        type: integer
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  common.Response-string:
+    properties:
+      data:
+        type: string
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  employee.CreateRequest:
+    properties:
+      name:
+        maxLength: 155
+        minLength: 2
+        type: string
+      role_id:
+        minimum: 1
+        type: integer
+    required:
+    - name
+    - role_id
+    type: object
+  employee.Response:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for managing IDM service
+  title: IDM API documentation
+paths:
+  /employees:
+    get:
+      consumes:
+      - application/json
+      description: returns a list of all employees
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-array_employee_Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Get all employees
+      tags:
+      - employee
+    post:
+      consumes:
+      - application/json
+      description: Create a new employee.
+      parameters:
+      - description: create employee request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/employee.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-int64'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: create a new employee
+      tags:
+      - employee
+  /employees/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a single employee by their unique ID
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-int64'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Delete employee by ID
+      tags:
+      - employee
+    get:
+      consumes:
+      - application/json
+      description: returns details of a single employee by their unique ID
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-employee_Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Get employee by ID
+      tags:
+      - employee
+  /employees/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes multiple employees matching the provided IDs
+      parameters:
+      - collectionFormat: csv
+        description: Comma-separated list of employee IDs to delete (e.g., 1,2,3)
+        in: query
+        items:
+          type: integer
+        name: ids
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-array_int64'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Delete multiple employees by IDs
+      tags:
+      - employee
+  /employees/find:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of employees matching the provided IDs
+      parameters:
+      - collectionFormat: csv
+        description: Comma-separated list of employee IDs (e.g., 1,2,3)
+        in: query
+        items:
+          type: integer
+        name: ids
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Response-array_employee_Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Get employees by multiple IDs
+      tags:
+      - employee
+  /employees/page:
+    get:
+      consumes:
+      - application/json
+      description: get employees with dynamic filter(optional) and pagination
+      parameters:
+      - description: Page number (0 is first page)
+        in: query
+        name: pageNumber
+        required: true
+        type: integer
+      - description: Page size (number of employee on the page)
+        in: query
+        name: pageSize
+        required: true
+        type: integer
+      - description: Filter name of employees
+        in: query
+        name: textFilter
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.PageResponse-array_employee_Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.Response-string'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.Response-string'
+      summary: Get employees with dynamic filter(optional) and pagination.
+      tags:
+      - employee
+schemes:
+- http
+swagger: "2.0"

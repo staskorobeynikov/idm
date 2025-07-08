@@ -47,6 +47,16 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupApiV1.Delete("/employees/:id", c.DeleteById)
 }
 
+// Функция-хендлер, которая будет вызываться при POST запросе по маршруту "/api/v1/employees"
+// @Summary create a new employee
+// @Description Create a new employee.
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param request body employee.CreateRequest true "create employee request"
+// @Success 200 {object} common.Response[int64]
+// @Failure 400 {object} common.Response[string]
+// @Router /employees [post]
 func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -71,6 +81,19 @@ func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response.Id)
 }
 
+// Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/find"
+// @Summary Get employees with dynamic filter(optional) and pagination.
+// @Description get employees with dynamic filter(optional) and pagination
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param pageNumber  query int true "Page number (0 is first page)"
+// @Param pageSize    query int true "Page size (number of employee on the page)"
+// @Param textFilter  query string false "Filter name of employees"
+// @Success 200 {object} common.PageResponse[[]employee.Response]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees/page [get]
 func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -109,6 +132,17 @@ func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
+// Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/:id"
+// @Summary Get employee by ID
+// @Description returns details of a single employee by their unique ID
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param id path int true "Employee ID"
+// @Success 200 {object} common.Response[employee.Response]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees/{id} [get]
 func (c *Controller) FindById(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -138,6 +172,16 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
+// Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees"
+// @Summary Get all employees
+// @Description returns a list of all employees
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Success 200 {object} common.Response[[]employee.Response]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees [get]
 func (c *Controller) FindAll(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -150,6 +194,17 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
+// Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/find?ids=1,2,3"
+// @Summary Get employees by multiple IDs
+// @Description Returns a list of employees matching the provided IDs
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param ids query []int true "Comma-separated list of employee IDs (e.g., 1,2,3)"
+// @Success 200 {object} common.Response[[]employee.Response]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees/find [get]
 func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -183,6 +238,17 @@ func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
+// Функция-хендлер, которая будет вызываться при DELETE запросе по маршруту "/api/v1/employees/:id"
+// @Summary Delete employee by ID
+// @Description Deletes a single employee by their unique ID
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param id path int true "Employee ID"
+// @Success 200 {object} common.Response[int64]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees/{id} [delete]
 func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
@@ -211,6 +277,17 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, Response{Id: int64(id)})
 }
 
+// Функция-хендлер, которая будет вызываться при Delete запросе по маршруту "/api/v1/employees/delete?ids=1,2,3"
+// @Summary Delete multiple employees by IDs
+// @Description Deletes multiple employees matching the provided IDs
+// @Tags employee
+// @Accept json
+// @Produce json
+// @Param ids query []int true "Comma-separated list of employee IDs to delete (e.g., 1,2,3)"
+// @Success 200 {object} common.Response[[]int64]
+// @Failure 400 {object} common.Response[string]
+// @Failure 500 {object} common.Response[string]
+// @Router /employees/delete [delete]
 func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
 	logger := middleware.GetLogger(ctx.Context())
