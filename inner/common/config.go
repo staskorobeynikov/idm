@@ -17,6 +17,8 @@ type Config struct {
 	AppVersion     string `validate:"required"`
 	LogLevel       string
 	LogDevelopMode bool
+	SslSert        string `validate:"required"`
+	SslKey         string `validate:"required"`
 }
 
 func GetConfig(envFile string) Config {
@@ -31,6 +33,8 @@ func GetConfig(envFile string) Config {
 		AppVersion:     os.Getenv("APP_VERSION"),
 		LogLevel:       os.Getenv("LOG_LEVEL"),
 		LogDevelopMode: os.Getenv("LOG_DEVELOP_MODE") == "true",
+		SslSert:        os.Getenv("SSL_SERT"),
+		SslKey:         os.Getenv("SSL_KEY"),
 	}
 	err = validator.New().Struct(cfg)
 	if err != nil {

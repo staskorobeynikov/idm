@@ -16,19 +16,22 @@ type Server struct {
 	GroupInternal fiber.Router
 }
 
+type ServerV2 struct {
+	App *fiberV2.App
+}
+
 func registerMiddleware(app *fiber.App) {
 	app.Use(recover.New())
 	app.Use(requestid.New())
 }
 
-func NewServer(enableSwagger bool) *Server {
+func NewServer() *Server {
 	app := fiber.New()
 	registerMiddleware(app)
-	if enableSwagger {
-		go startSwaggerServer()
-	}
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://127.0.0.1:8081/"}, // Swagger UI порт
+		AllowOrigins: []string{
+			"https://localhost:8081",
+		},
 	}))
 	groupInternal := app.Group("/internal")
 	groupApi := app.Group("/api")
@@ -40,11 +43,8 @@ func NewServer(enableSwagger bool) *Server {
 	}
 }
 
-func startSwaggerServer() {
+func NewServerV2() *ServerV2 {
 	app := fiberV2.New()
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
-	err := app.Listen(":8081")
-	if err != nil {
-		panic(err)
-	}
+	return &ServerV2{App: app}
 }
