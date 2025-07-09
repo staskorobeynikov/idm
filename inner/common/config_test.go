@@ -14,6 +14,8 @@ func TestEnvFileNotExistThenGetConfigFromEnvVars(t *testing.T) {
 	t.Setenv("DB_DSN", dsn)
 	t.Setenv("APP_NAME", "idm")
 	t.Setenv("APP_VERSION", "1.0.0")
+	t.Setenv("SSL_SERT", "ssl.cert")
+	t.Setenv("SSL_KEY", "ssl.key")
 	config := GetConfig("")
 	assert.Equal(t, "postgres", config.DbDriverName)
 	assert.Equal(t, dsn, config.Dsn)
@@ -28,7 +30,8 @@ func TestEnvFileExistHaventVarsThenGetEmptyConfig(t *testing.T) {
 			"'DbDriverName' failed on the 'required' tag\nKey: 'Config.Dsn' Error:Field validation for 'Dsn' failed "+
 			"on the 'required' tag\nKey: 'Config.AppName' Error:Field validation for 'AppName' failed on the "+
 			"'required' tag\nKey: 'Config.AppVersion' Error:Field validation for 'AppVersion' failed on the "+
-			"'required' tag", r)
+			"'required' tag\nKey: 'Config.SslSert' Error:Field validation for 'SslSert' failed on the 'required' tag"+
+			"\nKey: 'Config.SslKey' Error:Field validation for 'SslKey' failed on the 'required' tag", r)
 	}()
 	t.Setenv("DB_DRIVER_NAME", "")
 	t.Setenv("DB_DSN", "")
@@ -45,6 +48,8 @@ func TestEnvFileExistHaventVarsInEnvFileThenGetValidConfig(t *testing.T) {
 	t.Setenv("DB_DSN", dsn)
 	t.Setenv("APP_NAME", "idm")
 	t.Setenv("APP_VERSION", "1.0.0")
+	t.Setenv("SSL_SERT", "ssl.cert")
+	t.Setenv("SSL_KEY", "ssl.key")
 	file := createEnvFile(t, "")
 	defer os.Remove(file)
 	config := GetConfig(file)
@@ -54,7 +59,8 @@ func TestEnvFileExistHaventVarsInEnvFileThenGetValidConfig(t *testing.T) {
 
 func TestEnvFileExistHaveVarsInEnvFileThenGetValidConfig(t *testing.T) {
 	_ = assert.New(t)
-	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0")
+	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0\n"+
+		"SSL_SERT=certs/ssl.cert\nSSL_KEY=certs/ssl.key")
 	defer os.Remove(file)
 	config := GetConfig(file)
 	assert.Equal(t, "random_driver", config.DbDriverName)
@@ -65,7 +71,8 @@ func TestEnvFileExistHaveVarsInEnvFileAndEnvVarsThenGetValidConfig(t *testing.T)
 	_ = assert.New(t)
 	t.Setenv("DB_DRIVER_NAME", "postgres")
 	t.Setenv("DB_DSN", dsn)
-	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0")
+	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\nDB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0"+
+		"\nSSL_SERT=certs/ssl.cert\nSSL_KEY=certs/ssl.key")
 	defer os.Remove(file)
 	config := GetConfig(file)
 	assert.Equal(t, "postgres", config.DbDriverName)

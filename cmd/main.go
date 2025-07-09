@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"idm/docs"
@@ -23,11 +24,16 @@ import (
 // @description  API for managing IDM service
 // @host localhost:8080
 // @BasePath /api/v1
-// @schemes http
+// @schemes https
 func main() {
 	cfg := common.GetConfig(".env")
 	docs.SwaggerInfo.Version = cfg.AppVersion
 	var logger = common.NewLogger(cfg)
+	cer, err := tls.LoadX509KeyPair(cfg.SslSert, cfg.SslKey)
+	if err != nil {
+		logger.Panic("failed certificate loading: %s", zap.Error(err))
+	}
+	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cer}}
 	defer func() { _ = logger.Sync() }()
 	db := database.ConnectDbWithCfg(cfg)
 	defer func() {
@@ -37,7 +43,22 @@ func main() {
 	}()
 	var server = build(cfg, logger, db)
 	go func() {
-		var err = server.App.Listen(":8080")
+		ln, err := tls.Listen("tcp", ":8080", tlsConfig)
+		if err != nil {
+			logger.Panic("failed TLS listener creating: %s", zap.Error(err))
+		}
+		err = server.App.Listener(ln)
+		if err != nil {
+			logger.Panic("http server error: %s", zap.Error(err))
+		}
+	}()
+	var serverV2 = buildV2()
+	go func() {
+		ln, err := tls.Listen("tcp", ":8081", tlsConfig)
+		if err != nil {
+			logger.Panic("failed TLS listener creating: %s", zap.Error(err))
+		}
+		err = serverV2.App.Listener(ln)
 		if err != nil {
 			logger.Panic("http server error: %s", zap.Error(err))
 		}
@@ -68,7 +89,7 @@ func gracefulShutdown(
 }
 
 func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
-	var server = web.NewServer(true)
+	var server = web.NewServer()
 	server.App.Use(middleware.LoggerMiddleware(logger.Logger))
 	var employeeRepo = employee.NewRepository(db)
 	var roleRepo = role.NewRepository(db)
@@ -82,4 +103,8 @@ func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
 	var infoController = info.NewController(server, cfg, db, logger)
 	infoController.RegisterRoutes()
 	return server
+}
+
+func buildV2() *web.ServerV2 {
+	return web.NewServerV2()
 }

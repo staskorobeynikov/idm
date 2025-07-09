@@ -463,7 +463,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{"http"},
+	Schemes:          []string{"https"},
 	Title:            "IDM API documentation",
 	Description:      "API for managing IDM service",
 	InfoInstanceName: "swagger",

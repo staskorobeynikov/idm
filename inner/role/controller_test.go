@@ -54,7 +54,7 @@ var logger = &common.Logger{Logger: zap.NewNop()}
 func TestCreateRole(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("create role without error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -76,7 +76,7 @@ func TestCreateRole(t *testing.T) {
 		a.Empty(responseBody.Message)
 	})
 	t.Run("create role validation error - name required", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -103,7 +103,7 @@ func TestCreateRole(t *testing.T) {
 func TestFindRoleById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find role by id", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -122,7 +122,7 @@ func TestFindRoleById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find role - incorrect id", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -134,7 +134,7 @@ func TestFindRoleById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find role - validation error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -156,7 +156,7 @@ func TestFindRoleById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find role - not found error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -182,7 +182,7 @@ func TestFindRoleById(t *testing.T) {
 func TestFindAllRoles(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find all roles", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -207,7 +207,7 @@ func TestFindAllRoles(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find all with error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -233,7 +233,7 @@ func TestFindAllRoles(t *testing.T) {
 func TestFindRolesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find roles by ids", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -257,7 +257,7 @@ func TestFindRolesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find roles by ids - error parsing", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -282,7 +282,7 @@ func TestFindRolesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find roles by ids - validation error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -304,7 +304,7 @@ func TestFindRolesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find roles by ids - not found error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -330,7 +330,7 @@ func TestFindRolesByIds(t *testing.T) {
 func TestDeleteRoleById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find role by id", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -349,7 +349,7 @@ func TestDeleteRoleById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find role - incorrect id", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -361,7 +361,7 @@ func TestDeleteRoleById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find role - validation error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -383,7 +383,7 @@ func TestDeleteRoleById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find role - not found error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -409,7 +409,7 @@ func TestDeleteRoleById(t *testing.T) {
 func TestDeleteRolesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("delete roles by ids", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -433,7 +433,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("delete roles by ids - error parsing", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -453,7 +453,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete roles by ids - validation error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
@@ -475,7 +475,7 @@ func TestDeleteRolesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete roles by ids - not found error", func(t *testing.T) {
-		server := web.NewServer(false)
+		server := web.NewServer()
 		var svc = new(MockService)
 		var controller = NewController(server, svc, logger)
 		controller.RegisterRoutes()
