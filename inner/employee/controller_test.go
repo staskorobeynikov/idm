@@ -150,8 +150,19 @@ func TestCreateEmployee(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("create employee without token", func(t *testing.T) {
+		fakeAuth := func(c *fiber.Ctx) error {
+			authHeader := c.Get("Authorization")
+			if authHeader == "" {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"success": false,
+					"error":   "missing or malformed JWT",
+				})
+			}
+			c.Locals(web.JwtKey, &jwt.Token{})
+			return c.Next()
+		}
 		server := web.NewServer()
-		server.GroupApiV1.Use(web.AuthMiddleware(common.NewLogger(common.Config{})))
+		server.GroupApiV1.Use(fakeAuth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
