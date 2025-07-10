@@ -2,7 +2,8 @@ package employee
 
 import (
 	"encoding/json"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"idm/inner/common"
@@ -12,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type MockService struct {
@@ -56,7 +58,15 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 func TestCreateEmployee(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("create employee without error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -78,7 +88,15 @@ func TestCreateEmployee(t *testing.T) {
 		a.Empty(responseBody.Message)
 	})
 	t.Run("create employee validation error - name required", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -101,7 +119,15 @@ func TestCreateEmployee(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("create employee validation error - short name", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -123,12 +149,134 @@ func TestCreateEmployee(t *testing.T) {
 		a.Nil(err)
 		a.Equal(message, responseBody.Message)
 	})
+	t.Run("create employee without token", func(t *testing.T) {
+		server := web.NewServer()
+		server.GroupApiV1.Use(web.AuthMiddleware(common.NewLogger(common.Config{})))
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "missing or malformed JWT"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee invalid token", func(t *testing.T) {
+		server := web.NewServer()
+		server.GroupApiV1.Use(web.AuthMiddleware(common.NewLogger(common.Config{})))
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Set("Authorization", "Bearer this.is.not.a.jwt")
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "token is malformed: token contains an invalid number of segments"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee expired token", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{
+				Roles: []string{web.IdmAdmin},
+			},
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+			},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"success": false,
+					"error":   "token has invalid claims: token is expired",
+				})
+			}
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
+		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "token has invalid claims: token is expired"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee without role admin", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmUser}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
+		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		resp, err := server.App.Test(request)
+		message := "Permission denied"
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusForbidden, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
 }
 
 func TestFindEmployeeById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employee by id", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -147,7 +295,15 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find employee - incorrect id", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -159,7 +315,15 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find employee - validation error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -181,7 +345,15 @@ func TestFindEmployeeById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employee - not found error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -207,7 +379,15 @@ func TestFindEmployeeById(t *testing.T) {
 func TestFindAllEmployees(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find all employees", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -232,7 +412,15 @@ func TestFindAllEmployees(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find all with error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -258,7 +446,15 @@ func TestFindAllEmployees(t *testing.T) {
 func TestFindEmployeesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employees by ids", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -282,7 +478,15 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("find employees by ids - error parsing", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -307,7 +511,15 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employees by ids - validation error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -329,7 +541,15 @@ func TestFindEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employees by ids - not found error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -355,7 +575,15 @@ func TestFindEmployeesByIds(t *testing.T) {
 func TestDeleteEmployeeById(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("find employee by id", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -374,7 +602,15 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data.Id)
 	})
 	t.Run("find employee - incorrect id", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -386,7 +622,15 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(http.StatusBadRequest, resp.StatusCode)
 	})
 	t.Run("find employee - validation error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -408,7 +652,15 @@ func TestDeleteEmployeeById(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("find employee - not found error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -434,7 +686,15 @@ func TestDeleteEmployeeById(t *testing.T) {
 func TestDeleteEmployeesByIds(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("delete employees by ids", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -458,7 +718,15 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(responses, responseBody.Data)
 	})
 	t.Run("delete employees by ids - error parsing", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -478,7 +746,15 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete employees by ids - validation error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
@@ -500,7 +776,15 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("delete employees by ids - not found error", func(t *testing.T) {
+		var claims = &web.IdmClaims{
+			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+		}
+		var auth = func(c *fiber.Ctx) error {
+			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+			return c.Next()
+		}
 		server := web.NewServer()
+		server.GroupApiV1.Use(auth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()

@@ -3,11 +3,13 @@ package employee
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/middleware"
 	"idm/inner/web"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -49,20 +51,26 @@ func (c *Controller) RegisterRoutes() {
 
 // Функция-хендлер, которая будет вызываться при POST запросе по маршруту "/api/v1/employees"
 // @Summary create a new employee
-// @Description Create a new employee.
+// @Description Create a new employee with roles: admin
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param request body employee.CreateRequest true "create employee request"
 // @Success 200 {object} common.Response[int64]
 // @Failure 400 {object} common.Response[string]
 // @Router /employees [post]
-func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
+func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	var request CreateRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
 		logger.Error("create employee", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
@@ -83,8 +91,9 @@ func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/find"
 // @Summary Get employees with dynamic filter(optional) and pagination.
-// @Description get employees with dynamic filter(optional) and pagination
+// @Description get employees with dynamic filter(optional) and pagination with roles: admin, user
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param pageNumber  query int true "Page number (0 is first page)"
@@ -94,9 +103,15 @@ func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees/page [get]
-func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
+func (c *Controller) FindWithOffset(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !(slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) ||
+		slices.Contains(claims.RealmAccess.Roles, web.IdmUser)) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	pageSize, err := strconv.Atoi(ctx.Query("pageSize", "100"))
 	if err != nil {
@@ -134,8 +149,9 @@ func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/:id"
 // @Summary Get employee by ID
-// @Description returns details of a single employee by their unique ID
+// @Description returns details of a single employee by their unique ID with roles: admin, user
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param id path int true "Employee ID"
@@ -143,9 +159,15 @@ func (c *Controller) FindWithOffset(ctx fiber.Ctx) error {
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees/{id} [get]
-func (c *Controller) FindById(ctx fiber.Ctx) error {
+func (c *Controller) FindById(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !(slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) ||
+		slices.Contains(claims.RealmAccess.Roles, web.IdmUser)) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	var param = ctx.Params("id")
 	id, err := strconv.Atoi(param)
@@ -174,17 +196,24 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees"
 // @Summary Get all employees
-// @Description returns a list of all employees
+// @Description returns a list of all employees with roles: admin, user
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Success 200 {object} common.Response[[]employee.Response]
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees [get]
-func (c *Controller) FindAll(ctx fiber.Ctx) error {
+func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !(slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) ||
+		slices.Contains(claims.RealmAccess.Roles, web.IdmUser)) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	response, err := c.employeeService.FindAll()
 	if err != nil {
@@ -196,8 +225,9 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при GET запросе по маршруту "/api/v1/employees/find?ids=1,2,3"
 // @Summary Get employees by multiple IDs
-// @Description Returns a list of employees matching the provided IDs
+// @Description Returns a list of employees matching the provided IDs with roles: admin, user
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param ids query []int true "Comma-separated list of employee IDs (e.g., 1,2,3)"
@@ -205,9 +235,9 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees/find [get]
-func (c *Controller) FindByIds(ctx fiber.Ctx) error {
+func (c *Controller) FindByIds(ctx *fiber.Ctx) error {
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	idsParam := ctx.Query("ids")
 	stringIds := strings.Split(idsParam, ",")
@@ -240,8 +270,9 @@ func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при DELETE запросе по маршруту "/api/v1/employees/:id"
 // @Summary Delete employee by ID
-// @Description Deletes a single employee by their unique ID
+// @Description Deletes a single employee by their unique ID with roles: admin
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param id path int true "Employee ID"
@@ -249,9 +280,14 @@ func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees/{id} [delete]
-func (c *Controller) DeleteById(ctx fiber.Ctx) error {
+func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	var param = ctx.Params("id")
 	id, err := strconv.Atoi(param)
@@ -279,8 +315,9 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 
 // Функция-хендлер, которая будет вызываться при Delete запросе по маршруту "/api/v1/employees/delete?ids=1,2,3"
 // @Summary Delete multiple employees by IDs
-// @Description Deletes multiple employees matching the provided IDs
+// @Description Deletes multiple employees matching the provided IDs with roles: admin
 // @Tags employee
+// @Security OAuth2Password
 // @Accept json
 // @Produce json
 // @Param ids query []int true "Comma-separated list of employee IDs to delete (e.g., 1,2,3)"
@@ -288,9 +325,14 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 // @Failure 400 {object} common.Response[string]
 // @Failure 500 {object} common.Response[string]
 // @Router /employees/delete [delete]
-func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
+func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	var token = ctx.Locals(web.JwtKey).(*jwt.Token)
+	claims := token.Claims.(*web.IdmClaims)
+	if !slices.Contains(claims.RealmAccess.Roles, web.IdmAdmin) {
+		return common.ErrResponse(ctx, fiber.StatusForbidden, "Permission denied")
+	}
 	requestId := string(ctx.Response().Header.Peek(fiber.HeaderXRequestID))
-	logger := middleware.GetLogger(ctx.Context())
+	logger := middleware.GetLogger(ctx)
 	logger.Info(fmt.Sprint("Handling request with ID:", requestId))
 	idsParam := ctx.Query("ids")
 	stringIds := strings.Split(idsParam, ",")

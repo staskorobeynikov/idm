@@ -1,6 +1,6 @@
 package common
 
-import "github.com/gofiber/fiber/v3"
+import "github.com/gofiber/fiber/v2"
 
 type Response[T any] struct {
 	Success bool   `json:"success"`
@@ -16,7 +16,7 @@ type PageResponse[T any] struct {
 }
 
 func ErrResponse(
-	c fiber.Ctx,
+	c *fiber.Ctx,
 	code int,
 	message string,
 ) error {
@@ -28,7 +28,7 @@ func ErrResponse(
 }
 
 func OkResponse[T any](
-	c fiber.Ctx,
+	c *fiber.Ctx,
 	data T,
 ) error {
 	return c.JSON(&Response[T]{

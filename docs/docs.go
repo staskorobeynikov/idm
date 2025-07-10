@@ -17,7 +17,12 @@ const docTemplate = `{
     "paths": {
         "/employees": {
             "get": {
-                "description": "returns a list of all employees",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "returns a list of all employees with roles: admin, user",
                 "consumes": [
                     "application/json"
                 ],
@@ -50,7 +55,12 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new employee.",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "Create a new employee with roles: admin",
                 "consumes": [
                     "application/json"
                 ],
@@ -90,7 +100,12 @@ const docTemplate = `{
         },
         "/employees/delete": {
             "delete": {
-                "description": "Deletes multiple employees matching the provided IDs",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "Deletes multiple employees matching the provided IDs with roles: admin",
                 "consumes": [
                     "application/json"
                 ],
@@ -138,7 +153,12 @@ const docTemplate = `{
         },
         "/employees/find": {
             "get": {
-                "description": "Returns a list of employees matching the provided IDs",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "Returns a list of employees matching the provided IDs with roles: admin, user",
                 "consumes": [
                     "application/json"
                 ],
@@ -186,7 +206,12 @@ const docTemplate = `{
         },
         "/employees/page": {
             "get": {
-                "description": "get employees with dynamic filter(optional) and pagination",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "get employees with dynamic filter(optional) and pagination with roles: admin, user",
                 "consumes": [
                     "application/json"
                 ],
@@ -243,7 +268,12 @@ const docTemplate = `{
         },
         "/employees/{id}": {
             "get": {
-                "description": "returns details of a single employee by their unique ID",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "returns details of a single employee by their unique ID with roles: admin, user",
                 "consumes": [
                     "application/json"
                 ],
@@ -285,7 +315,12 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Deletes a single employee by their unique ID",
+                "security": [
+                    {
+                        "OAuth2Password": []
+                    }
+                ],
+                "description": "Deletes a single employee by their unique ID with roles: admin",
                 "consumes": [
                     "application/json"
                 ],
@@ -454,6 +489,13 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "OAuth2Password": {
+            "type": "oauth2",
+            "flow": "password",
+            "tokenUrl": "http://localhost:9990/realms/idm/protocol/openid-connect/token"
         }
     }
 }`
