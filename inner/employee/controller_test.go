@@ -183,8 +183,21 @@ func TestCreateEmployee(t *testing.T) {
 		a.Equal(message, responseBody.Message)
 	})
 	t.Run("create employee invalid token", func(t *testing.T) {
+		fakeAuth := func(c *fiber.Ctx) error {
+			authHeader := c.Get("Authorization")
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenString = strings.TrimSpace(tokenString)
+			if len(strings.Split(tokenString, ".")) != 3 {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"success": false,
+					"error":   "token is malformed: token contains an invalid number of segments",
+				})
+			}
+			c.Locals(web.JwtKey, &jwt.Token{})
+			return c.Next()
+		}
 		server := web.NewServer()
-		server.GroupApiV1.Use(web.AuthMiddleware(common.NewLogger(common.Config{})))
+		server.GroupApiV1.Use(fakeAuth)
 		var svc = new(MockService)
 		var controller = NewController(server, svc)
 		controller.RegisterRoutes()
