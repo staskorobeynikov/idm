@@ -2,6 +2,8 @@ package tests
 
 import (
 	"encoding/json"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"idm/inner/common"
 	"idm/inner/database"
@@ -41,7 +43,15 @@ func TestEmployeeControllerFindWithOffset(t *testing.T) {
 	_ = emplFixture.CreateDatabase(db)
 	v := validator.New()
 	var employeeService = employee.NewService(employeeRepository, v)
+	var claims = &web.IdmClaims{
+		RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
+	}
+	var auth = func(c *fiber.Ctx) error {
+		c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
+		return c.Next()
+	}
 	server := web.NewServer()
+	server.GroupApiV1.Use(auth)
 	var employeeController = employee.NewController(server, employeeService)
 	employeeController.RegisterRoutes()
 	t.Run("get employees with offset - page 0, size 3", func(t *testing.T) {

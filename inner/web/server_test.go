@@ -1,7 +1,9 @@
 package web
 
 import (
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -13,8 +15,8 @@ func TestRecoverMiddleware(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("Middleware with Panic", func(t *testing.T) {
 		app := fiber.New()
-		registerMiddleware(app)
-		app.Get("/panic", func(c fiber.Ctx) error {
+		app.Use(recover.New())
+		app.Get("/panic", func(c *fiber.Ctx) error {
 			panic("something went wrong")
 		})
 		req := httptest.NewRequest(http.MethodGet, "/panic", nil)
@@ -26,11 +28,11 @@ func TestRecoverMiddleware(t *testing.T) {
 	})
 	t.Run("Middleware with Panic and server alive", func(t *testing.T) {
 		app := fiber.New()
-		registerMiddleware(app)
-		app.Get("/panic", func(c fiber.Ctx) error {
+		app.Use(recover.New())
+		app.Get("/panic", func(c *fiber.Ctx) error {
 			panic("simulated panic")
 		})
-		app.Get("/ok", func(c fiber.Ctx) error {
+		app.Get("/ok", func(c *fiber.Ctx) error {
 			return c.SendString("I am alive")
 		})
 		req1 := httptest.NewRequest(http.MethodGet, "/panic", nil)
@@ -48,8 +50,8 @@ func TestRecoverMiddleware(t *testing.T) {
 
 func TestRequestMiddleware(t *testing.T) {
 	app := fiber.New()
-	registerMiddleware(app)
-	app.Get("/test", func(c fiber.Ctx) error {
+	app.Use(requestid.New())
+	app.Get("/test", func(c *fiber.Ctx) error {
 		id := string(c.Response().Header.Peek(fiber.HeaderXRequestID))
 		return c.SendString(id)
 	})

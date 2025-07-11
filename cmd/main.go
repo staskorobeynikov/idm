@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/swagger"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"idm/docs"
@@ -25,6 +28,9 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 // @schemes https
+// @securityDefinitions.oauth2.password OAuth2Password
+// @tokenUrl http://localhost:9990/realms/idm/protocol/openid-connect/token
+// @scope openid Access everything
 func main() {
 	cfg := common.GetConfig(".env")
 	docs.SwaggerInfo.Version = cfg.AppVersion
@@ -48,17 +54,6 @@ func main() {
 			logger.Panic("failed TLS listener creating: %s", zap.Error(err))
 		}
 		err = server.App.Listener(ln)
-		if err != nil {
-			logger.Panic("http server error: %s", zap.Error(err))
-		}
-	}()
-	var serverV2 = buildV2()
-	go func() {
-		ln, err := tls.Listen("tcp", ":8081", tlsConfig)
-		if err != nil {
-			logger.Panic("failed TLS listener creating: %s", zap.Error(err))
-		}
-		err = serverV2.App.Listener(ln)
 		if err != nil {
 			logger.Panic("http server error: %s", zap.Error(err))
 		}
@@ -88,9 +83,17 @@ func gracefulShutdown(
 	logger.Info("Server exiting")
 }
 
-func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
+func build(
+	cfg common.Config,
+	logger *common.Logger,
+	db *sqlx.DB,
+) *web.Server {
 	var server = web.NewServer()
 	server.App.Use(middleware.LoggerMiddleware(logger.Logger))
+	server.App.Use(requestid.New())
+	server.App.Use(recover.New())
+	server.App.Use("/swagger/*", swagger.HandlerDefault)
+	server.GroupApiV1.Use(web.AuthMiddleware(logger))
 	var employeeRepo = employee.NewRepository(db)
 	var roleRepo = role.NewRepository(db)
 	var vld = validator.New()
@@ -103,8 +106,4 @@ func build(cfg common.Config, logger *common.Logger, db *sqlx.DB) *web.Server {
 	var infoController = info.NewController(server, cfg, db, logger)
 	infoController.RegisterRoutes()
 	return server
-}
-
-func buildV2() *web.ServerV2 {
-	return web.NewServerV2()
 }
