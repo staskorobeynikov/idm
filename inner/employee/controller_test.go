@@ -1,11 +1,16 @@
 package employee
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
+	jwtMiddleware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"idm/inner/common"
 	"idm/inner/web"
 	"io"
@@ -57,6 +62,7 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 
 func TestCreateEmployee(t *testing.T) {
 	var a = assert.New(t)
+	logger := common.NewLogger(common.GetConfig("../../.env"))
 	t.Run("create employee without error", func(t *testing.T) {
 		var claims = &web.IdmClaims{
 			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
@@ -149,115 +155,6 @@ func TestCreateEmployee(t *testing.T) {
 		a.Nil(err)
 		a.Equal(message, responseBody.Message)
 	})
-	t.Run("create employee without token", func(t *testing.T) {
-		fakeAuth := func(c *fiber.Ctx) error {
-			authHeader := c.Get("Authorization")
-			if authHeader == "" {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"success": false,
-					"error":   "missing or malformed JWT",
-				})
-			}
-			c.Locals(web.JwtKey, &jwt.Token{})
-			return c.Next()
-		}
-		server := web.NewServer()
-		server.GroupApiV1.Use(fakeAuth)
-		var svc = new(MockService)
-		var controller = NewController(server, svc)
-		controller.RegisterRoutes()
-		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
-		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
-		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
-		message := "missing or malformed JWT"
-		resp, err := server.App.Test(request)
-		a.Nil(err)
-		a.NotEmpty(resp)
-		a.Equal(http.StatusUnauthorized, resp.StatusCode)
-		bytesData, err := io.ReadAll(resp.Body)
-		a.Nil(err)
-		var responseBody common.Response[Response]
-		err = json.Unmarshal(bytesData, &responseBody)
-		a.Nil(err)
-		a.Equal(message, responseBody.Message)
-	})
-	t.Run("create employee invalid token", func(t *testing.T) {
-		fakeAuth := func(c *fiber.Ctx) error {
-			authHeader := c.Get("Authorization")
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			tokenString = strings.TrimSpace(tokenString)
-			if len(strings.Split(tokenString, ".")) != 3 {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"success": false,
-					"error":   "token is malformed: token contains an invalid number of segments",
-				})
-			}
-			c.Locals(web.JwtKey, &jwt.Token{})
-			return c.Next()
-		}
-		server := web.NewServer()
-		server.GroupApiV1.Use(fakeAuth)
-		var svc = new(MockService)
-		var controller = NewController(server, svc)
-		controller.RegisterRoutes()
-		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
-		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
-		request.Header.Set("Authorization", "Bearer this.is.not.a.jwt")
-		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
-		message := "token is malformed: token contains an invalid number of segments"
-		resp, err := server.App.Test(request)
-		a.Nil(err)
-		a.NotEmpty(resp)
-		a.Equal(http.StatusUnauthorized, resp.StatusCode)
-		bytesData, err := io.ReadAll(resp.Body)
-		a.Nil(err)
-		var responseBody common.Response[Response]
-		err = json.Unmarshal(bytesData, &responseBody)
-		a.Nil(err)
-		a.Equal(message, responseBody.Message)
-	})
-	t.Run("create employee expired token", func(t *testing.T) {
-		var claims = &web.IdmClaims{
-			RealmAccess: web.RealmAccessClaims{
-				Roles: []string{web.IdmAdmin},
-			},
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
-			},
-		}
-		var auth = func(c *fiber.Ctx) error {
-			if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"success": false,
-					"error":   "token has invalid claims: token is expired",
-				})
-			}
-			c.Locals(web.JwtKey, &jwt.Token{Claims: claims})
-			return c.Next()
-		}
-		server := web.NewServer()
-		server.GroupApiV1.Use(auth)
-		var svc = new(MockService)
-		var controller = NewController(server, svc)
-		controller.RegisterRoutes()
-		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
-		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
-		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
-		message := "token has invalid claims: token is expired"
-		resp, err := server.App.Test(request)
-		a.Nil(err)
-		a.NotEmpty(resp)
-		a.Equal(http.StatusUnauthorized, resp.StatusCode)
-		bytesData, err := io.ReadAll(resp.Body)
-		a.Nil(err)
-		var responseBody common.Response[Response]
-		err = json.Unmarshal(bytesData, &responseBody)
-		a.Nil(err)
-		a.Equal(message, responseBody.Message)
-	})
 	t.Run("create employee without role admin", func(t *testing.T) {
 		var claims = &web.IdmClaims{
 			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmUser}},
@@ -280,6 +177,156 @@ func TestCreateEmployee(t *testing.T) {
 		a.Nil(err)
 		a.NotEmpty(resp)
 		a.Equal(http.StatusForbidden, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee invalid token", func(t *testing.T) {
+		jwksServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			jwks := map[string]interface{}{
+				"keys": []interface{}{
+					map[string]interface{}{
+						"kty": "RSA",
+						"alg": "RS256",
+						"use": "sig",
+						"kid": "test-key",
+					},
+				},
+			}
+			_ = json.NewEncoder(w).Encode(jwks)
+		}))
+		defer jwksServer.Close()
+		web.AuthMiddleware = func(logger *common.Logger) fiber.Handler {
+			config := jwtMiddleware.Config{
+				ContextKey:   web.JwtKey,
+				ErrorHandler: web.CreateJwtErrorHandler(logger),
+				JWKSetURLs:   []string{jwksServer.URL},
+				Claims:       &web.IdmClaims{},
+			}
+			return jwtMiddleware.New(config)
+		}
+		server := web.NewServer()
+		server.GroupApiV1.Use(web.AuthMiddleware(logger))
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Set("Authorization", "Bearer this.is.not.a.jwt")
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "token is malformed: token contains an invalid number of segments"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee expired token", func(t *testing.T) {
+		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err)
+		publicKey := &privateKey.PublicKey
+		jwksServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			jwks := map[string]interface{}{
+				"keys": []interface{}{
+					map[string]interface{}{
+						"kty": "RSA",
+						"alg": "RS256",
+						"use": "sig",
+						"kid": "test-key",
+						"n":   base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes()),
+						"e":   "AQAB",
+					},
+				},
+			}
+			_ = json.NewEncoder(w).Encode(jwks)
+		}))
+		defer jwksServer.Close()
+		claims := jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		token.Header["kid"] = "test-key"
+		signedToken, err := token.SignedString(privateKey)
+		require.NoError(t, err)
+		web.AuthMiddleware = func(logger *common.Logger) fiber.Handler {
+			config := jwtMiddleware.Config{
+				ContextKey:   web.JwtKey,
+				ErrorHandler: web.CreateJwtErrorHandler(logger),
+				JWKSetURLs:   []string{jwksServer.URL},
+				Claims:       &web.IdmClaims{},
+			}
+			return jwtMiddleware.New(config)
+		}
+		server := web.NewServer()
+		server.GroupApiV1.Use(web.AuthMiddleware(logger))
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Set("Authorization", "Bearer "+signedToken)
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "token has invalid claims: token is expired"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
+		bytesData, err := io.ReadAll(resp.Body)
+		a.Nil(err)
+		var responseBody common.Response[Response]
+		err = json.Unmarshal(bytesData, &responseBody)
+		a.Nil(err)
+		a.Equal(message, responseBody.Message)
+	})
+	t.Run("create employee without token", func(t *testing.T) {
+		jwksServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			jwks := map[string]interface{}{
+				"keys": []interface{}{
+					map[string]interface{}{
+						"kty": "RSA",
+						"alg": "RS256",
+						"use": "sig",
+						"kid": "test-key",
+					},
+				},
+			}
+			_ = json.NewEncoder(w).Encode(jwks)
+		}))
+		defer jwksServer.Close()
+		web.AuthMiddleware = func(logger *common.Logger) fiber.Handler {
+			config := jwtMiddleware.Config{
+				ContextKey:   web.JwtKey,
+				ErrorHandler: web.CreateJwtErrorHandler(logger),
+				JWKSetURLs:   []string{jwksServer.URL},
+				Claims:       &web.IdmClaims{},
+			}
+			return jwtMiddleware.New(config)
+		}
+		server := web.NewServer()
+		server.GroupApiV1.Use(web.AuthMiddleware(logger))
+		var svc = new(MockService)
+		var controller = NewController(server, svc)
+		controller.RegisterRoutes()
+		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
+		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
+		request.Header.Add("Content-Type", "application/json")
+		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		message := "missing or malformed JWT"
+		resp, err := server.App.Test(request)
+		a.Nil(err)
+		a.NotEmpty(resp)
+		a.Equal(http.StatusUnauthorized, resp.StatusCode)
 		bytesData, err := io.ReadAll(resp.Body)
 		a.Nil(err)
 		var responseBody common.Response[Response]

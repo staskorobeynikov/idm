@@ -26,16 +26,16 @@ type RealmAccessClaims struct {
 var AuthMiddleware = func(logger *common.Logger) fiber.Handler {
 	config := jwtMiddleware.Config{
 		ContextKey:   JwtKey,
-		ErrorHandler: createJwtErrorHandler(logger),
+		ErrorHandler: CreateJwtErrorHandler(logger),
 		JWKSetURLs:   []string{"http://localhost:9990/realms/idm/protocol/openid-connect/certs"},
 		Claims:       &IdmClaims{},
 	}
 	return jwtMiddleware.New(config)
 }
 
-func createJwtErrorHandler(logger *common.Logger) fiber.ErrorHandler {
+func CreateJwtErrorHandler(logger *common.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
-		logger.Error("failed autentication", zap.Error(err))
+		logger.Error("failed authentication: ", zap.Error(err))
 		// Если токен не может быть прочитан, то возвращаем 401
 		return common.ErrResponse(
 			ctx,
