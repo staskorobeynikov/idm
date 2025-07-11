@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -62,7 +63,12 @@ func (svc *MockService) DeleteByIds(request IdsRequest) error {
 
 func TestCreateEmployee(t *testing.T) {
 	var a = assert.New(t)
-	logger := common.NewLogger(common.GetConfig("../../.env"))
+	file := createEnvFile(t, "DB_DRIVER_NAME=random_driver\n"+
+		"DB_DSN=random_dsn\nAPP_NAME=idm\nAPP_VERSION=1.0.0"+
+		"\nSSL_SERT=certs/ssl.cert\nSSL_KEY=certs/ssl.key\n"+
+		"KEYCLOAK_JWK_URL=http://localhost:9990/realms/")
+	logger := common.NewLogger(common.GetConfig(file))
+	defer os.Remove(file)
 	t.Run("create employee without error", func(t *testing.T) {
 		var claims = &web.IdmClaims{
 			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
@@ -876,4 +882,18 @@ func TestDeleteEmployeesByIds(t *testing.T) {
 		a.Nil(err)
 		a.Equal(message, responseBody.Message)
 	})
+}
+
+func createEnvFile(t *testing.T, s string) string {
+	f, err := os.CreateTemp(".", ".env")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return f.Name()
 }
