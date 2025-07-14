@@ -2,7 +2,7 @@ package info
 
 import (
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"

@@ -2,7 +2,7 @@ package role
 
 import (
 	"errors"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
@@ -46,9 +46,9 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupApiV1.Delete("/roles/:id", c.DeleteById)
 }
 
-func (c *Controller) CreateRole(ctx fiber.Ctx) error {
+func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 	var request CreateRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
 		c.logger.Error("create role", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
@@ -67,7 +67,7 @@ func (c *Controller) CreateRole(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response.Id)
 }
 
-func (c *Controller) FindById(ctx fiber.Ctx) error {
+func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	var param = ctx.Params("id")
 	id, err := strconv.Atoi(param)
 	if err != nil {
@@ -93,7 +93,7 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindAll(ctx fiber.Ctx) error {
+func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindAll()
 	if err != nil {
 		c.logger.Error("find all roles", zap.Error(err))
@@ -102,7 +102,7 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindByIds(ctx fiber.Ctx) error {
+func (c *Controller) FindByIds(ctx *fiber.Ctx) error {
 	idsParam := ctx.Query("ids")
 	stringIds := strings.Split(idsParam, ",")
 	var ids []int64
@@ -133,7 +133,7 @@ func (c *Controller) FindByIds(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
-func (c *Controller) DeleteById(ctx fiber.Ctx) error {
+func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	var param = ctx.Params("id")
 	id, err := strconv.Atoi(param)
 	if err != nil {
@@ -159,7 +159,7 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, Response{Id: int64(id)})
 }
 
-func (c *Controller) DeleteByIds(ctx fiber.Ctx) error {
+func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	idsParam := ctx.Query("ids")
 	stringIds := strings.Split(idsParam, ",")
 	var ids []int64

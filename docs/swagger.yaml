@@ -93,7 +93,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: returns a list of all employees
+      description: 'returns a list of all employees with roles: admin, user'
       produces:
       - application/json
       responses:
@@ -109,13 +109,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Get all employees
       tags:
       - employee
     post:
       consumes:
       - application/json
-      description: Create a new employee.
+      description: 'Create a new employee with roles: admin'
       parameters:
       - description: create employee request
         in: body
@@ -134,6 +136,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: create a new employee
       tags:
       - employee
@@ -141,7 +145,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Deletes a single employee by their unique ID
+      description: 'Deletes a single employee by their unique ID with roles: admin'
       parameters:
       - description: Employee ID
         in: path
@@ -163,13 +167,16 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Delete employee by ID
       tags:
       - employee
     get:
       consumes:
       - application/json
-      description: returns details of a single employee by their unique ID
+      description: 'returns details of a single employee by their unique ID with roles:
+        admin, user'
       parameters:
       - description: Employee ID
         in: path
@@ -191,6 +198,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Get employee by ID
       tags:
       - employee
@@ -198,7 +207,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Deletes multiple employees matching the provided IDs
+      description: 'Deletes multiple employees matching the provided IDs with roles:
+        admin'
       parameters:
       - collectionFormat: csv
         description: Comma-separated list of employee IDs to delete (e.g., 1,2,3)
@@ -223,6 +233,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Delete multiple employees by IDs
       tags:
       - employee
@@ -230,7 +242,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns a list of employees matching the provided IDs
+      description: 'Returns a list of employees matching the provided IDs with roles:
+        admin, user'
       parameters:
       - collectionFormat: csv
         description: Comma-separated list of employee IDs (e.g., 1,2,3)
@@ -255,6 +268,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Get employees by multiple IDs
       tags:
       - employee
@@ -262,7 +277,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: get employees with dynamic filter(optional) and pagination
+      description: 'get employees with dynamic filter(optional) and pagination with
+        roles: admin, user'
       parameters:
       - description: Page number (0 is first page)
         in: query
@@ -293,9 +309,16 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/common.Response-string'
+      security:
+      - OAuth2Password: []
       summary: Get employees with dynamic filter(optional) and pagination.
       tags:
       - employee
 schemes:
 - https
+securityDefinitions:
+  OAuth2Password:
+    flow: password
+    tokenUrl: http://localhost:9990/realms/idm/protocol/openid-connect/token
+    type: oauth2
 swagger: "2.0"
