@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"idm/inner/common"
@@ -34,7 +35,7 @@ func NewService(repo Repo, validator Validator) *Service {
 	}
 }
 
-func (s *Service) Save(request CreateRequest) (Response, error) {
+func (s *Service) Save(ctx context.Context, request CreateRequest) (Response, error) {
 	err := s.validator.Validate(request)
 	if err != nil {
 		return Response{}, common.RequestValidationError{
