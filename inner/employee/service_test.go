@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -99,10 +100,12 @@ func TestSave(t *testing.T) {
 		err = errors.New("database error")
 		repo.On("FindByName", tx, entity.Name).Return(false, err)
 		var want = fmt.Errorf("error finding employee: %w", err)
-		response, got := svc.Save(CreateRequest{
-			Name:   "test",
-			RoleId: 1,
-		})
+		response, got := svc.Save(
+			context.Background(),
+			CreateRequest{
+				Name:   "test",
+				RoleId: 1,
+			})
 		a.Empty(response)
 		a.NotNil(got)
 		a.Equal(want, got)
@@ -133,10 +136,12 @@ func TestSave(t *testing.T) {
 			RoleId:    1,
 		}
 		repo.On("FindByName", tx, entity.Name).Return(true, nil)
-		got, err := svc.Save(CreateRequest{
-			Name:   "test",
-			RoleId: 1,
-		})
+		got, err := svc.Save(
+			context.Background(),
+			CreateRequest{
+				Name:   "test",
+				RoleId: 1,
+			})
 		var want = common.AlreadyExistsError{Message: fmt.Sprintf("employee already exists: %v", entity.Name)}
 		a.Empty(got)
 		a.NotNil(err)
@@ -173,10 +178,12 @@ func TestSave(t *testing.T) {
 		})).Return(int64(-1), err)
 		var want = fmt.Errorf("error saving employee with: %w", err)
 
-		response, got := svc.Save(CreateRequest{
-			Name:   "test",
-			RoleId: 1,
-		})
+		response, got := svc.Save(
+			context.Background(),
+			CreateRequest{
+				Name:   "test",
+				RoleId: 1,
+			})
 		a.Empty(response)
 		a.NotNil(err)
 		a.Equal(want, got)
@@ -213,10 +220,12 @@ func TestSave(t *testing.T) {
 		var want = Response{
 			Id: 1,
 		}
-		got, err := svc.Save(CreateRequest{
-			Name:   "test",
-			RoleId: 1,
-		})
+		got, err := svc.Save(
+			context.Background(),
+			CreateRequest{
+				Name:   "test",
+				RoleId: 1,
+			})
 		a.NotEmpty(got)
 		a.Nil(err)
 		a.Equal(want, got)

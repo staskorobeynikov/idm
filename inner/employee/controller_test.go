@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -26,8 +27,8 @@ type MockService struct {
 	mock.Mock
 }
 
-func (svc *MockService) Save(request CreateRequest) (Response, error) {
-	args := svc.Called(request)
+func (svc *MockService) Save(ctx context.Context, request CreateRequest) (Response, error) {
+	args := svc.Called(ctx, request)
 	return args.Get(0).(Response), args.Error(1)
 }
 
@@ -68,7 +69,7 @@ func TestCreateEmployee(t *testing.T) {
 		"\nSSL_SERT=certs/ssl.cert\nSSL_KEY=certs/ssl.key\n"+
 		"KEYCLOAK_JWK_URL=http://localhost:9990/realms/")
 	logger := common.NewLogger(common.GetConfig(file))
-	defer os.Remove(file)
+	defer os.Remove(file) // удалим файл после всего TestCreateEmployee
 	t.Run("create employee without error", func(t *testing.T) {
 		var claims = &web.IdmClaims{
 			RealmAccess: web.RealmAccessClaims{Roles: []string{web.IdmAdmin}},
@@ -85,7 +86,8 @@ func TestCreateEmployee(t *testing.T) {
 		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
 		resp, err := server.App.Test(request)
 		a.Nil(err)
 		a.NotEmpty(resp)
@@ -98,6 +100,7 @@ func TestCreateEmployee(t *testing.T) {
 		a.Equal(int64(123), responseBody.Data)
 		a.True(responseBody.Success)
 		a.Empty(responseBody.Message)
+
 	})
 	t.Run("create employee validation error - name required", func(t *testing.T) {
 		var claims = &web.IdmClaims{
@@ -116,7 +119,8 @@ func TestCreateEmployee(t *testing.T) {
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Add("Content-Type", "application/json")
 		message := "Field validation for 'Name' failed on the 'required' tag"
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{}, common.RequestValidationError{
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{}, common.RequestValidationError{
 			Message: message,
 		})
 		resp, err := server.App.Test(request)
@@ -147,7 +151,8 @@ func TestCreateEmployee(t *testing.T) {
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Add("Content-Type", "application/json")
 		message := "employee already exists: john doe"
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{}, common.AlreadyExistsError{
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{}, common.AlreadyExistsError{
 			Message: message,
 		})
 		resp, err := server.App.Test(request)
@@ -177,7 +182,8 @@ func TestCreateEmployee(t *testing.T) {
 		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
 		resp, err := server.App.Test(request)
 		message := "Permission denied"
 		a.Nil(err)
@@ -223,7 +229,8 @@ func TestCreateEmployee(t *testing.T) {
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Set("Authorization", "Bearer this.is.not.a.jwt")
 		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
 		message := "token is malformed: token contains an invalid number of segments"
 		resp, err := server.App.Test(request)
 		a.Nil(err)
@@ -282,7 +289,8 @@ func TestCreateEmployee(t *testing.T) {
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Set("Authorization", "Bearer "+signedToken)
 		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
 		message := "token has invalid claims: token is expired"
 		resp, err := server.App.Test(request)
 		a.Nil(err)
@@ -327,7 +335,8 @@ func TestCreateEmployee(t *testing.T) {
 		var body = strings.NewReader("{\"name\": \"john doe\", \"role_id\": 1}")
 		var request = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees", body)
 		request.Header.Add("Content-Type", "application/json")
-		svc.On("Save", mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
+		svc.On("Save", mock.AnythingOfType("*fasthttp.RequestCtx"),
+			mock.AnythingOfType("CreateRequest")).Return(Response{Id: int64(123)}, nil)
 		message := "missing or malformed JWT"
 		resp, err := server.App.Test(request)
 		a.Nil(err)

@@ -89,8 +89,8 @@ func build(
 	db *sqlx.DB,
 ) *web.Server {
 	var server = web.NewServer()
-	server.App.Use(middleware.LoggerMiddleware(logger.Logger))
 	server.App.Use(requestid.New())
+	server.App.Use(middleware.LoggerMiddleware(logger))
 	server.App.Use(recover.New())
 	server.App.Use("/swagger/*", swagger.HandlerDefault)
 	server.GroupApiV1.Use(web.AuthMiddleware(logger))

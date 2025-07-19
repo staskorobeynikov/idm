@@ -7,7 +7,7 @@ import (
 	"idm/inner/common"
 )
 
-func LoggerMiddleware(logger *zap.Logger) fiber.Handler {
+func LoggerMiddleware(logger *common.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.WithValue(c.Context(), common.LoggerKey, logger)
 		c.SetUserContext(ctx)
@@ -15,9 +15,9 @@ func LoggerMiddleware(logger *zap.Logger) fiber.Handler {
 	}
 }
 
-func GetLogger(ctx *fiber.Ctx) *zap.Logger {
-	if l, ok := ctx.UserContext().Value(common.LoggerKey).(*zap.Logger); ok {
+func GetLogger(ctx *fiber.Ctx) *common.Logger {
+	if l, ok := ctx.UserContext().Value(common.LoggerKey).(*common.Logger); ok {
 		return l
 	}
-	return zap.NewNop()
+	return &common.Logger{Logger: zap.NewNop()}
 }
